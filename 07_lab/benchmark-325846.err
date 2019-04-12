@@ -1,0 +1,5 @@
+srun: error: nid00997: task 1: Exited with exit code 1
+srun: Terminating job step 325846.0
+srun: error: nid00996: task 0: Exited with exit code 1
+srun: error: nid00998: task 2: Exited with exit code 1
+srun: error: nid00999: task 3: Exited with exit code 1

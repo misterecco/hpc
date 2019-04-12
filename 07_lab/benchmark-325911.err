@@ -1,0 +1,10 @@
+what: command: cannot open [No such file or directory]
+what: to: cannot open [No such file or directory]
+what: run: cannot open [No such file or directory]
+srun: error: unable to initialize step launch listening socket: Address already in use
+srun: error: Application launch failed: Address already in use
+srun: Job step aborted: Waiting up to 32 seconds for job step to finish.
+srun: error: Timed out waiting for job step to complete
+srun: Job 325911 step creation temporarily disabled, retrying
+srun: error: Unable to create step for job 325911: Job/step already completing or completed
+slurmstepd: error: *** JOB 325911 ON nid00996 CANCELLED AT 2019-04-08T20:48:07 DUE TO TIME LIMIT ***

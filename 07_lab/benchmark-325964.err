@@ -1,0 +1,2 @@
+ERROR: Unable to locate a modulefile for 'parallel'
+/var/spool/slurmd/job325964/slurm_script: line 14: parallel: command not found

@@ -1,0 +1,54 @@
+what: command: cannot open [No such file or directory]
+what: to: cannot open [No such file or directory]
+what: run: cannot open [No such file or directory]
+srun: Job 325940 step creation temporarily disabled, retrying
+srun: Step created for job 325940
+srun: Job 325940 step creation temporarily disabled, retrying
+srun: Step created for job 325940
+srun: Job 325940 step creation temporarily disabled, retrying
+srun: Step created for job 325940
+srun: Job 325940 step creation temporarily disabled, retrying
+srun: Step created for job 325940
+srun: Job 325940 step creation temporarily disabled, retrying
+srun: Step created for job 325940
+srun: Job 325940 step creation temporarily disabled, retrying
+srun: Step created for job 325940
+srun: Job 325940 step creation temporarily disabled, retrying
+srun: Step created for job 325940
+srun: Job 325940 step creation temporarily disabled, retrying
+srun: Step created for job 325940
+srun: Job 325940 step creation temporarily disabled, retrying
+srun: Step created for job 325940
+srun: Job 325940 step creation temporarily disabled, retrying
+srun: Step created for job 325940
+srun: Job 325940 step creation temporarily disabled, retrying
+srun: Step created for job 325940
+srun: Job 325940 step creation temporarily disabled, retrying
+srun: Step created for job 325940
+srun: Job 325940 step creation temporarily disabled, retrying
+srun: Step created for job 325940
+srun: Job 325940 step creation temporarily disabled, retrying
+srun: Step created for job 325940
+srun: Job 325940 step creation temporarily disabled, retrying
+srun: Step created for job 325940
+srun: Job 325940 step creation temporarily disabled, retrying
+srun: Step created for job 325940
+srun: Job 325940 step creation temporarily disabled, retrying
+srun: Step created for job 325940
+srun: Job 325940 step creation temporarily disabled, retrying
+srun: Step created for job 325940
+srun: Job 325940 step creation temporarily disabled, retrying
+srun: Step created for job 325940
+srun: Job 325940 step creation temporarily disabled, retrying
+srun: Step created for job 325940
+srun: Job 325940 step creation temporarily disabled, retrying
+srun: Step created for job 325940
+srun: error: unable to initialize step launch listening socket: Address already in use
+srun: error: Application launch failed: Address already in use
+srun: Job step aborted: Waiting up to 32 seconds for job step to finish.
+srun: error: Timed out waiting for job step to complete
+srun: Job 325940 step creation temporarily disabled, retrying
+srun: error: Unable to create step for job 325940: Job/step already completing or completed
+srun: error: Slurm job 325940 has expired
+srun: Check SLURM_JOB_ID environment variable. Expired or invalid job 325940
+slurmstepd: error: *** JOB 325940 ON nid00099 CANCELLED AT 2019-04-08T21:04:37 DUE TO TIME LIMIT ***

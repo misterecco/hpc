@@ -1,0 +1,25 @@
+#!/bin/bash -l
+#SBATCH --job-name hpc-benchmark      # this will be shown in the queueing system
+#SBATCH --output "benchmark-%j.out"   # stdout redirection
+#SBATCH --error "benchmark-%j.err"    # stderr redirection
+#SBATCH --account "GC72-18"           # the number of our grant
+#SBATCH --nodes 4                     # how many nodes we want
+#SBATCH --tasks-per-node 24           # each node is 2 socket, 12 core, so we want 24 tasks on each node
+#SBATCH --time 00:20:00               # if the job runs longer than this, it'll be killed
+#SBATCH --ntasks 10
+
+# module load parallel
+
+# parallel="parallel --delay 0.2 -j $SLURM_NTASKS --joblog runtask.log --resume"
+# $parallel "srun benchmark-latency.exe {1} {2}" ::: {0..29} ::: 1 10 100 1000 10000 100000 1000000 10000000 100000000
+
+
+for size in 1 10 100 1000 10000 100000 1000000 10000000 100000000
+do
+  for i in $(seq 0 29)
+  do 
+    srun benchmark-latency.exe $i $size      
+    wait
+    sleep 2
+  done
+done

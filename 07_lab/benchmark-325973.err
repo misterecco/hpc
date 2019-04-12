@@ -1,0 +1,15 @@
+slurmstepd: error: execve(): /lustre/tetyda/home/tk359746/07_lab/./benchmark.sh: Exec format error
+slurmstepd: error: execve(): /lustre/tetyda/home/tk359746/07_lab/./benchmark.sh: Exec format error
+slurmstepd: error: execve(): /lustre/tetyda/home/tk359746/07_lab/./benchmark.sh: Exec format error
+srun: error: nid01080: tasks 0-2: Exited with exit code 8
+srun: Terminating job step 325973.0
+slurmstepd: error: execve(): /lustre/tetyda/home/tk359746/07_lab/./benchmark.sh: Exec format error
+slurmstepd: error: execve(): /lustre/tetyda/home/tk359746/07_lab/./benchmark.sh: Exec format error
+slurmstepd: error: execve(): /lustre/tetyda/home/tk359746/07_lab/./benchmark.sh: Exec format error
+slurmstepd: error: execve(): /lustre/tetyda/home/tk359746/07_lab/./benchmark.sh: Exec format error
+slurmstepd: error: execve(): /lustre/tetyda/home/tk359746/07_lab/./benchmark.sh: Exec format error
+slurmstepd: error: execve(): /lustre/tetyda/home/tk359746/07_lab/./benchmark.sh: Exec format error
+slurmstepd: error: execve(): /lustre/tetyda/home/tk359746/07_lab/./benchmark.sh: Exec format error
+srun: error: nid01082: tasks 6-7: Exited with exit code 8
+srun: error: nid01081: tasks 3-5: Exited with exit code 8
+srun: error: nid01083: tasks 8-9: Exited with exit code 8
