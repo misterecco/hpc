@@ -6,6 +6,7 @@
 
 #include <iostream>
 #include <string>
+#include <cstring>
 #include <cassert>
 #include <mpi.h>
 #include "graph-base.h"
@@ -15,7 +16,48 @@
 static void runFloydWarshallParallel(Graph* graph, int numProcesses, int myRank) {
     assert(numProcesses <= graph->numVertices);
 
-    /* FIXME: implement */
+    int m = graph->numVertices;
+    int owner = -1;
+    int ownerK = 0;
+    int ownerMax = 0;
+
+    int* buffer;
+
+    size_t rowSize = sizeof(int) * m;
+    buffer = (int*) malloc(rowSize);
+
+    for (int k = 0; k < m; ++k) {
+        if (ownerK == ownerMax) {
+            owner += 1;
+            ownerK = 0;
+            ownerMax = m / numProcesses + (owner < m % numProcesses);
+        }
+
+        if (myRank == owner) {
+            std::memcpy(buffer, graph->data[ownerK], rowSize);
+        }
+        
+        MPI_Bcast(buffer, m, MPI_INT, owner, MPI_COMM_WORLD);
+        
+        int f = graph->firstRowIdxIncl;
+        int l = graph->lastRowIdxExcl;
+
+        for (int i = f; i < l; ++i) {
+            for (int j = 0; j < m; ++j) {
+                int pathSum = graph->data[i - f][k] + buffer[j];
+
+                if (graph->data[i - f][j] > pathSum) {
+                    graph->data[i - f][j] = pathSum;
+                }
+            }
+        }
+
+        ownerK += 1;
+
+        MPI_Barrier(MPI_COMM_WORLD);
+    }
+
+    free(buffer);
 }
 
 
@@ -58,7 +100,9 @@ int main(int argc, char *argv[]) {
         }
     }
 
-    std::cerr << "Running the Floyd-Warshall algorithm for a graph with " << numVertices << " vertices." << std::endl;
+    if (myRank == 0) {
+      std::cerr << "Running the Floyd-Warshall algorithm for a graph with " << numVertices << " vertices." << std::endl;
+    }
 
     auto graph = createAndDistributeGraph(numVertices, numProcesses, myRank);
     if (graph == nullptr) {
@@ -77,14 +121,16 @@ int main(int argc, char *argv[]) {
 
     double endTime = MPI_Wtime();
 
-    std::cerr
-            << "The time required for the Floyd-Warshall algorithm on a "
-            << numVertices
-            << "-node graph with "
-            << numProcesses
-            << " process(es): "
-            << endTime - startTime
-            << std::endl;
+    if (myRank == 0) {
+        std::cerr
+                << "The time required for the Floyd-Warshall algorithm on a "
+                << numVertices
+                << "-node graph with "
+                << numProcesses
+                << " process(es): "
+                << endTime - startTime
+                << std::endl;
+    }
 
     if (showResults) {
         collectAndPrintGraph(graph, numProcesses, myRank);
