@@ -1,16 +1,10 @@
 #include <iostream>
 #include <cstdio>
 
+#include "config.h"
+#include "pathfinding.h"
+
 using std::string;
-
-enum class Version { SLIDING, PATHFINDING };
-
-
-struct Config {
-  Version version;
-  string input_data;
-  string output_data;
-};
 
 void print_usage(int argc, char** argv) {
     printf("Usage: %s --input-data PATH --output-data PATH --version sliding|pathfinding\n",
@@ -47,6 +41,16 @@ Config parse_args(int argc, char** argv) {
     }
   }
 
+  if (config.output_data == "") {
+    printf("Missing output data path\n");
+    print_usage(argc, argv);
+    exit(1);
+  } else if (config.input_data == "") {
+    printf("Missing input data path\n");
+    print_usage(argc, argv);
+    exit(1);
+  }
+
   return config;
 }
 
@@ -55,5 +59,14 @@ int main(int argc, char** argv) {
   /* printf("Config: version: %s, input_data: %s, output_data: %s\n", config.version ==
       Version::SLIDING ? "sliding" : "pathfinding", config.input_data.c_str(),
       config.output_data.c_str()); */
+  if (config.version == Version::SLIDING) {
+    printf("This part is not implemented yet\n");
+    exit(1);
+  } else {
+    Pathfinding pathfinding(config);
+    pathfinding.solve();
+  }
+
   return 0;
 }
+
