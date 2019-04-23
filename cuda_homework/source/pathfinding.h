@@ -1,50 +1,30 @@
-// #include <cuda.h>
-#include <stdio.h>
+#include <cstdio>
+#include <limits>
 
 #include "config.h"
 
-using std::pair;
+#define BLOCKS 28 
+#define THREADS_PER_BLOCK 32
+#define QUEUES_PER_BLOCK 128
+#define QUEUE_SIZE 8192
 
-typedef pair<int, int> Coord;
+
+struct Coord {
+  int x;
+  int y;
+};
+
+struct State {
+  int f = std::numeric_limits<int>::max();
+  int g = std::numeric_limits<int>::max();
+  int prev = -1; // y * n + x
+  int node = -1; // y * n + x
+};
 
 class Pathfinding {
  public:
-  Pathfinding (const Config& config) : config(config) {
-    FILE* input = fopen(config.input_data.c_str(), "r");
-
-    fscanf(input, "%d,%d", &n, &m);
-    fscanf(input, "%d,%d", &start.first, &start.second);
-    fscanf(input, "%d,%d", &end.first, &end.second);
-
-    gridHost = (int*) malloc(sizeof(int) * n * m);
-    if (gridHost == nullptr) {
-      fprintf(stderr, "Memory allocation failed!\n");
-      exit(1);
-    }
-
-    for (int i = 0; i < n * m; i++) {
-      gridHost[i] = 1;
-    }
-
-    int holes, non_ones;
-
-    fscanf(input, "%d", &holes); 
-    for (int i = 0; i < holes; i++) {
-      int x, y;
-      fscanf(input, "%d,%d", &x, &y);
-      gridHost[getPosition(x, y)] = -1;
-    }
-
-    fscanf(input, "%d", &non_ones);
-    for (int i = 0; i < non_ones; i++) {
-      int x, y, val;
-      fscanf(input, "%d,%d,%d", &x, &y, &val);
-      gridHost[getPosition(x, y)] = val;
-    }
-  }
-
+  Pathfinding(const Config& config);
   void solve();
-
   void printGrid() const {
     for (int y = 0; y < m; y++) {
       for (int x = 0; x < n; x++) {
@@ -54,15 +34,7 @@ class Pathfinding {
     }
   }
 
-  ~Pathfinding() {
-    if (gridHost != nullptr) {
-      free(gridHost);
-    }
-
-    if (gridCuda != nullptr) {
-      cudaFree(gridCuda);
-    }
-  }
+  ~Pathfinding();
 
  private:
   const Config config;
@@ -72,8 +44,12 @@ class Pathfinding {
   Coord end;
   int* gridHost = nullptr;
   int* gridCuda = nullptr;
+  State* stateMapHost;
+  State* stateMapCuda;
+  State* queuesCuda;
+  int* queueSizesCuda;
 
-  int getPosition(int x, int y) const {
+  size_t getPosition(int x, int y) const {
     return y * n + x;
   }
 };
