@@ -68,7 +68,84 @@ Pathfinding::~Pathfinding() {
   }
 }
 
-__global__ void kernel() {
+__device__ bool Pathfinding::inBounds(int x, int y) {
+  return x >= 0 && x < n && y >= 0 && y < m;
+}
+
+__device__ void Pathfinding::expand(State& st, State* states, int stateIdx) {
+  if (st.node == -1) {
+    return;
+  }
+
+  int x = st.node % n;
+  int y = st.node / n;
+  
+  int idx = 0;
+  for (auto i : {-1, 0, 1}) {
+    for (auto j : {-1, 0, 1}) {
+      if (i == 0 && j == 0) continue;
+
+      int nx = x + i;
+      int ny = y + j;
+
+      states[idx].prev = stateIdx;
+      states[idx].node = inBounds(nx, ny) ? ny * n + nx : -1;
+    }
+  }
+}
+
+__device__ void Pathfinding::lock() {
+  if (threadIdx.x == 0) {
+    lockCuda.lock();
+  }
+  __syncthreads();
+}
+
+__device__ void Pathfinding::unlock() {
+  if (threadIdx.x == 0) {
+    lockCuda.unlock();
+  }
+  __syncthreads();
+}
+
+__device__ void Pathfinding::extract() {
+  int idx = threadIdx.x + blockIdx.x * blockDim.x;
+  int blockOffset = blockIdx.x * blockDim.x;
+
+  __shared__ int offsets[THREADS_PER_BLOCK];
+
+  lock();
+
+  if (threadIdx.x == 0) {
+    offsets[0] = *statesSizeCuda;
+    for (int i = 1; i < THREADS_PER_BLOCK; i++) {
+      offsets[i] = offsets[i-1] + 8 * max(8, queueSizesCuda[i - 1 + blockOffset]);
+    }
+    *statesSizeCuda = offsets[THREADS_PER_BLOCK - 1] +
+                      8 * max(8, queueSizesCuda[THREADS_PER_BLOCK - 1 +
+                          blockOffset]);
+  }
+
+  unlock();
+
+  int stateIdx = offsets[threadIdx.x];
+
+  for (int i = 0; i < threadIdx.x && !empty(queueSizesCuda[idx]); i++) {
+    // TODO: extract state from the queue
+    // TODO: expand state
+  }
+}
+
+__device__ void Pathfinding::step() {
+}
+
+__device__ void Pathfinding::findPath() {
+  // TODO: while Q not empty
+  while(false) {
+  }
+}
+
+__global__ void kernel(Pathfinding& pathfinding) {
   return;
 }
 
@@ -84,6 +161,7 @@ void Pathfinding::solve() {
   cudaMalloc(&queuesCuda, sizeof(State) * BLOCKS * HEAP_SIZE);
   cudaMalloc(&queueSizesCuda, sizeof(int) * BLOCKS * QUEUES_PER_BLOCK);
   cudaMalloc(&hashtableCuda, sizeof(int) * TABLE_SIZE);
+  cudaMalloc(&statesSizeCuda, sizeof(int));
 
   // TODO: handle errors
   statesHost = (State*) malloc(sizeof(State) * n * m);
@@ -110,8 +188,11 @@ void Pathfinding::solve() {
   cudaMemcpy(statesCuda, statesHost, sizeof(State) * n * m, cudaMemcpyHostToDevice);
   cudaMemcpy(queuesCuda, &initQState, sizeof(QState), cudaMemcpyHostToDevice);
   cudaMemset(queueSizesCuda, 0, sizeof(int) * BLOCKS * QUEUES_PER_BLOCK);
+  cudaMemset(statesSizeCuda, 0, sizeof(int));
 
   int one = 1;
   cudaMemcpy(queueSizesCuda, &one, sizeof(int), cudaMemcpyHostToDevice);
+
+  // TODO
 }
 

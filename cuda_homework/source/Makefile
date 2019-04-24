@@ -4,7 +4,7 @@ CC := nvcc
 
 all: astar_gpu heap_cpu
 
-pathfinding.o: pathfinding.cu pathfinding.cuh heap.cuh hashtable.cuh
+pathfinding.o: pathfinding.cu pathfinding.cuh heap.cuh hashtable.cuh lock.cuh
 	$(CC) -c $@ $<
 
 astar_gpu: astar_gpu.cu pathfinding.o

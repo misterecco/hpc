@@ -37,7 +37,8 @@ __device__ T top(T* heap, int& heapSize) {
     int leftChild = 2 * k + 1;
     int rightChild = 2 * k + 2;
 
-    if ((rightChild < heapSize && heap[leftChild].f < heap[rightChild].f) || rightChild == heapSize) {
+    if ((rightChild < heapSize && heap[leftChild].f < heap[rightChild].f) 
+        || rightChild == heapSize) {
       if (leftChild < heapSize && heap[leftChild].f < last.f) {
         swap(heap, k, leftChild);
         k = leftChild;
@@ -57,8 +58,7 @@ __device__ T top(T* heap, int& heapSize) {
   return st;
 }
 
-template<typename T>
-__device__ bool empty(int& heapSize) {
+__device__ bool empty(int heapSize) {
   return heapSize == 0;
 }
 

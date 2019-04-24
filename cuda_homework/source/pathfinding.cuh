@@ -3,11 +3,12 @@
 #include <vector>
 
 #include "config.h"
+#include "lock.cuh"
 
 #define BLOCKS 28 
 #define THREADS_PER_BLOCK 128
 #define QUEUES_PER_BLOCK 128
-#define TABLE_SIZE 4 * 1024 * 1024 * 1024
+#define TABLE_SIZE 1024 * 1024 * 1024
 
 struct Coord {
   int x;
@@ -73,12 +74,23 @@ class Pathfinding {
   int* gridCuda = nullptr;
   State* statesHost;
   State* statesCuda;
+  int* statesSizeCuda;
   QState* queuesCuda;
   int* queueSizesCuda;
   int* hashtableCuda;
+  Lock lockCuda;
 
-  __host__ __device__ size_t getPosition(int x, int y) const {
+  __device__ __host__ size_t getPosition(int x, int y) const {
     return y * n + x;
   }
+
+  __device__ void expand(State& st, State* states, int stateIdx);
+  __device__ bool inBounds(int x, int y);
+  __device__ void lock();
+  __device__ void unlock();
+  __device__ void extract();
+  __device__ void expand();
+  __device__ void step();
+  __device__ void findPath();
 };
 
