@@ -1,17 +1,22 @@
 #include <cstdio>
 #include <limits>
+#include <vector>
 
 #include "config.h"
 
 #define BLOCKS 28 
-#define THREADS_PER_BLOCK 32
+#define THREADS_PER_BLOCK 128
 #define QUEUES_PER_BLOCK 128
-#define QUEUE_SIZE 8192
-
+#define TABLE_SIZE 4 * 1024 * 1024 * 1024
 
 struct Coord {
   int x;
   int y;
+};
+
+struct QState {
+  int f;
+  int stateNumber;
 };
 
 struct State {
@@ -19,7 +24,29 @@ struct State {
   int g = std::numeric_limits<int>::max();
   int prev = -1; // y * n + x
   int node = -1; // y * n + x
+
+  typedef unsigned int Seed;
+
+  static const std::vector<Seed> seeds;
+
+  unsigned int hash(Seed a) const {
+    return (a * node) % TABLE_SIZE;
+  }
+
+  bool isNull() const {
+    return node == -1;
+  }
+
+  bool equals(State& other) const {
+    return other.node == node;
+  }
+
+  void clear() {
+    node = -1;
+  }
 };
+
+static const std::vector<State::Seed> seeds = {100000007u, 350002487u};
 
 class Pathfinding {
  public:
@@ -44,12 +71,13 @@ class Pathfinding {
   Coord end;
   int* gridHost = nullptr;
   int* gridCuda = nullptr;
-  State* stateMapHost;
-  State* stateMapCuda;
-  State* queuesCuda;
+  State* statesHost;
+  State* statesCuda;
+  QState* queuesCuda;
   int* queueSizesCuda;
+  int* hashtableCuda;
 
-  size_t getPosition(int x, int y) const {
+  __host__ __device__ size_t getPosition(int x, int y) const {
     return y * n + x;
   }
 };

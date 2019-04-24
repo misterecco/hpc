@@ -2,7 +2,7 @@
 #include <cstdio>
 
 #include "config.h"
-#include "pathfinding.h"
+#include "pathfinding.cuh"
 
 using std::string;
 

@@ -1,4 +1,8 @@
-#include "pathfinding.h"
+#include <assert.h>
+
+#include "pathfinding.cuh"
+#include "hashtable.cuh"
+#include "heap.cuh"
 
 Pathfinding::Pathfinding (const Config& config) : config(config) {
   FILE* input = fopen(config.input_data.c_str(), "r");
@@ -43,12 +47,12 @@ Pathfinding::~Pathfinding() {
     cudaFree(gridCuda);
   }
 
-  if (stateMapHost != nullptr) {
-    free(stateMapHost);
+  if (statesHost != nullptr) {
+    free(statesHost);
   }
 
-  if (stateMapCuda != nullptr) {
-    cudaFree(stateMapCuda);
+  if (statesCuda != nullptr) {
+    cudaFree(statesCuda);
   }
 
   if (queuesCuda != nullptr) {
@@ -58,10 +62,10 @@ Pathfinding::~Pathfinding() {
   if (queueSizesCuda != nullptr) {
     cudaFree(queueSizesCuda);
   }
-}
 
-__device__ void fun() {
-  return;
+  if (hashtableCuda != nullptr) {
+    cudaFree(hashtableCuda);
+  }
 }
 
 __global__ void kernel() {
@@ -76,15 +80,16 @@ void Pathfinding::solve() {
 
   // TODO: handle errors
   cudaMalloc(&gridCuda, sizeof(State) * n * m);
-  cudaMalloc(&stateMapCuda, sizeof(State) * n * m);
-  cudaMalloc(&queuesCuda, sizeof(State) * BLOCKS * QUEUE_SIZE);
+  cudaMalloc(&statesCuda, sizeof(State) * n * m);
+  cudaMalloc(&queuesCuda, sizeof(State) * BLOCKS * HEAP_SIZE);
   cudaMalloc(&queueSizesCuda, sizeof(int) * BLOCKS * QUEUES_PER_BLOCK);
+  cudaMalloc(&hashtableCuda, sizeof(int) * TABLE_SIZE);
 
   // TODO: handle errors
-  stateMapHost = (State*) malloc(sizeof(State) * n * m);
+  statesHost = (State*) malloc(sizeof(State) * n * m);
 
   for (int i = 0; i < n * m; i++) {
-    stateMapHost[i] = State();
+    statesHost[i] = State();
   }
 
   int startNode = getPosition(start.x, start.y);
@@ -94,12 +99,16 @@ void Pathfinding::solve() {
     .prev = -1,
     .node = startNode,
   };
+  QState initQState = {
+    .f = 0,
+    .stateNumber = 0,
+  };
 
-  stateMapHost[startNode] = initState;
+  statesHost[startNode] = initState;
 
   // TODO: handle errors
-  cudaMemcpy(stateMapCuda, stateMapHost, sizeof(State) * n * m, cudaMemcpyHostToDevice);
-  cudaMemcpy(queuesCuda, &initState, sizeof(State), cudaMemcpyHostToDevice);
+  cudaMemcpy(statesCuda, statesHost, sizeof(State) * n * m, cudaMemcpyHostToDevice);
+  cudaMemcpy(queuesCuda, &initQState, sizeof(QState), cudaMemcpyHostToDevice);
   cudaMemset(queueSizesCuda, 0, sizeof(int) * BLOCKS * QUEUES_PER_BLOCK);
 
   int one = 1;
