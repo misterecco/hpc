@@ -97,6 +97,9 @@ __device__ void Pathfinding::expand(State& st, int stateIdx, int firstFreeSlot) 
     return;
   }
 
+  // printf("Expanding state: ");
+  st.print(n);
+
   int x = st.node % n;
   int y = st.node / n;
   
@@ -108,21 +111,25 @@ __device__ void Pathfinding::expand(State& st, int stateIdx, int firstFreeSlot) 
 
       int nx = x + i;
       int ny = y + j;
+      int newNode = getPosition(nx, ny);
 
-      if (inBounds(nx, ny)) {
-        int newNode = getPosition(nx, ny);
+      if (inBounds(nx, ny) && gridCuda[newNode] != -1) {
+        // printf("Expanded node: %d, %d, index: %d\n", nx, ny, idx);
         statesCuda[idx].prev = stateIdx;
         statesCuda[idx].node = newNode;
-        if (gridHost[newNode] != -1) {
-          statesCuda[idx].g = st.g + gridHost[newNode];
-          statesCuda[idx].f = statesCuda[idx].g + abs(nx - endCuda.x) 
+        statesCuda[idx].g = st.g + gridCuda[newNode];
+        statesCuda[idx].f = statesCuda[idx].g + abs(nx - endCuda.x) 
                             + abs(ny - endCuda.y);
-        }
       }
 
       idx++;
     }
   }
+
+  // for (int i = 0; i <= 8; i++) {
+    // printf("%d: ", i);
+    // statesCuda[i].print(n);
+  // }
 }
 
 __device__ void Pathfinding::extract() {
@@ -136,11 +143,16 @@ __device__ void Pathfinding::extract() {
   if (threadIdx.x == 0) {
     offsets[0] = *statesSizeCuda;
     for (int i = 1; i < THREADS_PER_BLOCK; i++) {
-      offsets[i] = offsets[i-1] + 8 * max(8, queueSizesCuda[i - 1 + blockOffset]);
+      offsets[i] = offsets[i-1] + 8 * min(8, queueSizesCuda[i - 1 + blockOffset]);
     }
     *statesSizeCuda = offsets[THREADS_PER_BLOCK - 1] +
-                      8 * max(8, queueSizesCuda[THREADS_PER_BLOCK - 1 +
+                      8 * min(8, queueSizesCuda[THREADS_PER_BLOCK - 1 +
                           blockOffset]);
+    // printf("blockIdx: %d: ", blockIdx.x);
+    // for (int i = 0; i < THREADS_PER_BLOCK; i++) {
+    //   printf("%d ", offsets[i]);
+    // } 
+    // printf("\n");
   }
 
   unlock();
@@ -160,9 +172,12 @@ __device__ void Pathfinding::findPath() {
 
   while(*finishedCuda == 0) {
     extract();
-    if (threadIdx.x == 0 && blockDim.x == 0) {
+    grid.sync();
+
+    if (threadIdx.x == 0 && blockIdx.x == 0) {
       int finished = 1;
       for (int i = 0; i < BLOCKS * THREADS_PER_BLOCK; i++) {
+        printf("i: %d, queueSize: %d\n", i, queueSizesCuda[i]);
         if (queueSizesCuda[i] > 0) {
           finished = 0;
           break;
@@ -172,7 +187,15 @@ __device__ void Pathfinding::findPath() {
         *finishedCuda = 1;
       }
     }
+
     grid.sync();
+  }
+
+  if (threadIdx.x == 0 && blockIdx.x == 0) {
+    for (int i = 0; i <= 8; i++) {
+      printf("%d: ", i);
+      statesCuda[i].print(n);
+    }
   }
 }
 
@@ -224,9 +247,11 @@ void Pathfinding::solve() {
 
   for (int i = 0; i <= 8; i++) {
     printf("%d: ", i);
-    statesHost[i].print();
+    statesHost[i].print(n);
   }
 
+  HANDLE_ERROR(cudaMemcpy(gridCuda, gridHost, sizeof(State) * n * m,
+        cudaMemcpyHostToDevice));
   HANDLE_ERROR(cudaMemcpy(statesCuda, statesHost, sizeof(State) * TABLE_SIZE,
         cudaMemcpyHostToDevice));
   HANDLE_ERROR(cudaMemcpy(queuesCuda, &initQState, sizeof(QState),
@@ -247,18 +272,21 @@ void Pathfinding::solve() {
                THREADS_PER_BLOCK, kernelArgs));
   //kernel<<<BLOCKS, THREADS_PER_BLOCK>>>(*this);
 
-  printf("Computation finished!\n");
-
   HANDLE_ERROR(cudaPeekAtLastError());
   HANDLE_ERROR(cudaDeviceSynchronize());
   HANDLE_ERROR(cudaPeekAtLastError());
+
+  printf("Computation finished!\n");
                               
   HANDLE_ERROR(cudaMemcpy(statesHost, statesCuda, sizeof(State) * TABLE_SIZE,
         cudaMemcpyDeviceToHost));
 
+  HANDLE_ERROR(cudaDeviceSynchronize());
+  HANDLE_ERROR(cudaPeekAtLastError());
+
   for (int i = 0; i <= 8; i++) {
     printf("%d: ", i);
-    statesHost[i].print();
+    statesHost[i].print(n);
   }
   // TODO: recreate the path
 }

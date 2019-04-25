@@ -46,8 +46,14 @@ struct State {
     node = -1;
   }
 
-  void print() {
-    printf("node: %d, prev: %d, f: %d, g: %d\n", node, prev, f, g);
+  __device__ __host__ void print(int n) {
+    printf("node.x: %d, node.y: %d, prev.x: %d, prev.y: %d, f: %d, g: %d\n", 
+        node == -1 ? -1 : node % n,
+        node == -1 ? -1 : node / n, 
+        prev == -1 ? -1 : prev % n,
+        prev == -1 ? -1 : prev / n,
+        f, 
+        g);
   }
 };
 
@@ -83,7 +89,7 @@ class Pathfinding {
   QState* queuesCuda = nullptr;
   int* queueSizesCuda = nullptr;
   int* hashtableCuda = nullptr;
-  bool* finishedCuda = nullptr;
+  int* finishedCuda = nullptr;
   Lock lockCuda;
 
   __device__ __host__ int getPosition(int x, int y) const {
