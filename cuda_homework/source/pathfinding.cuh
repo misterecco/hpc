@@ -21,8 +21,8 @@ struct QState {
 };
 
 struct State {
-  int f = std::numeric_limits<int>::max();
-  int g = std::numeric_limits<int>::max();
+  int f = -1;
+  int g = -1;
   int prev = -1; // y * n + x
   int node = -1; // y * n + x
 
@@ -34,8 +34,8 @@ struct State {
     return (a * node) % TABLE_SIZE;
   }
 
-  bool isNull() const {
-    return node == -1;
+  __device__ __host__ bool isNull() const {
+    return node == -1 || f == -1;
   }
 
   bool equals(State& other) const {
@@ -72,19 +72,19 @@ class Pathfinding {
   Coord end;
   int* gridHost = nullptr;
   int* gridCuda = nullptr;
-  State* statesHost;
-  State* statesCuda;
-  int* statesSizeCuda;
-  QState* queuesCuda;
-  int* queueSizesCuda;
-  int* hashtableCuda;
+  State* statesHost = nullptr;
+  State* statesCuda = nullptr;
+  int* statesSizeCuda = nullptr;
+  QState* queuesCuda = nullptr;
+  int* queueSizesCuda = nullptr;
+  int* hashtableCuda = nullptr;
   Lock lockCuda;
 
   __device__ __host__ size_t getPosition(int x, int y) const {
     return y * n + x;
   }
 
-  __device__ void expand(State& st, State* states, int stateIdx);
+  __device__ void expand(State& st, int stateIdx, int firstFreeSlot);
   __device__ bool inBounds(int x, int y);
   __device__ void lock();
   __device__ void unlock();

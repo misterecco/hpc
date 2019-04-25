@@ -4,6 +4,8 @@
 #include "hashtable.cuh"
 #include "heap.cuh"
 
+__constant__ Coord endCuda;
+
 Pathfinding::Pathfinding (const Config& config) : config(config) {
   FILE* input = fopen(config.input_data.c_str(), "r");
 
@@ -68,32 +70,6 @@ Pathfinding::~Pathfinding() {
   }
 }
 
-__device__ bool Pathfinding::inBounds(int x, int y) {
-  return x >= 0 && x < n && y >= 0 && y < m;
-}
-
-__device__ void Pathfinding::expand(State& st, State* states, int stateIdx) {
-  if (st.node == -1) {
-    return;
-  }
-
-  int x = st.node % n;
-  int y = st.node / n;
-  
-  int idx = 0;
-  for (auto i : {-1, 0, 1}) {
-    for (auto j : {-1, 0, 1}) {
-      if (i == 0 && j == 0) continue;
-
-      int nx = x + i;
-      int ny = y + j;
-
-      states[idx].prev = stateIdx;
-      states[idx].node = inBounds(nx, ny) ? ny * n + nx : -1;
-    }
-  }
-}
-
 __device__ void Pathfinding::lock() {
   if (threadIdx.x == 0) {
     lockCuda.lock();
@@ -106,6 +82,42 @@ __device__ void Pathfinding::unlock() {
     lockCuda.unlock();
   }
   __syncthreads();
+}
+
+__device__ bool Pathfinding::inBounds(int x, int y) {
+  return x >= 0 && x < n && y >= 0 && y < m;
+}
+
+__device__ void Pathfinding::expand(State& st, int stateIdx, int firstFreeSlot) {
+  if (st.isNull()) {
+    return;
+  }
+
+  int x = st.node % n;
+  int y = st.node / n;
+  
+  int idx = firstFreeSlot;
+  for (int i : {-1, 0, 1}) {
+    for (int j : {-1, 0, 1}) {
+      if (i == 0 && j == 0) continue;
+
+      int nx = x + i;
+      int ny = y + j;
+
+      if (inBounds(nx, ny)) {
+        int newNode = getPosition(nx, ny);
+        statesCuda[idx].prev = stateIdx;
+        statesCuda[idx].node = newNode;
+        if (gridHost[newNode] != -1) {
+          statesCuda[idx].g = st.g + gridHost[newNode];
+          statesCuda[idx].f = statesCuda[idx].g + abs(nx - endCuda.x) 
+                            + abs(ny - endCuda.y);
+        }
+      }
+
+      idx++;
+    }
+  }
 }
 
 __device__ void Pathfinding::extract() {
@@ -128,11 +140,13 @@ __device__ void Pathfinding::extract() {
 
   unlock();
 
-  int stateIdx = offsets[threadIdx.x];
+  int firstFreeSlot = offsets[threadIdx.x];
 
-  for (int i = 0; i < threadIdx.x && !empty(queueSizesCuda[idx]); i++) {
-    // TODO: extract state from the queue
-    // TODO: expand state
+  for (int i = 0; i < 8 && !empty(queueSizesCuda[idx]); i++) {
+    QState qst = pop(queuesCuda + HEAP_SIZE * idx, queueSizesCuda[idx]);
+    State st = statesCuda[qst.stateNumber];
+    expand(st, qst.stateNumber, firstFreeSlot);
+    firstFreeSlot += 8;
   }
 }
 
@@ -149,6 +163,7 @@ __global__ void kernel(Pathfinding& pathfinding) {
   return;
 }
 
+
 void Pathfinding::solve() {
   printf("n: %d, m: %d\n", n, m);
   printf("start: %d, %d\n", start.x, start.y);
@@ -162,6 +177,7 @@ void Pathfinding::solve() {
   cudaMalloc(&queueSizesCuda, sizeof(int) * BLOCKS * QUEUES_PER_BLOCK);
   cudaMalloc(&hashtableCuda, sizeof(int) * TABLE_SIZE);
   cudaMalloc(&statesSizeCuda, sizeof(int));
+  cudaMemcpyToSymbol(&endCuda, &end, sizeof(Coord));
 
   // TODO: handle errors
   statesHost = (State*) malloc(sizeof(State) * n * m);
@@ -172,7 +188,7 @@ void Pathfinding::solve() {
 
   int startNode = getPosition(start.x, start.y);
   State initState = {
-    .f = 0,
+    .f = abs(start.x - end.x) + abs(start.y - end.y),
     .g = 0,
     .prev = -1,
     .node = startNode,
