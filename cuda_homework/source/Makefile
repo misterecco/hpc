@@ -5,7 +5,7 @@ CCFLAGS := --gpu-architecture=compute_60 --gpu-code=sm_60 -rdc=true --compiler-o
 
 all: astar_gpu heap_cpu
 
-pathfinding.o: pathfinding.cu pathfinding.cuh heap.cuh hashtable.cuh lock.cuh
+pathfinding.o: pathfinding.cu pathfinding.cuh heap.cuh hashtable.cuh lock.cuh errors.h
 	$(CC) $(CCFLAGS) -c $@ $<
 
 astar_gpu: astar_gpu.cu pathfinding.o

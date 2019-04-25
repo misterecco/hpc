@@ -18,11 +18,7 @@ Pathfinding::Pathfinding (const Config& config) : config(config) {
   fscanf(input, "%d,%d", &start.x, &start.y);
   fscanf(input, "%d,%d", &end.x, &end.y);
 
-  gridHost = (int*) malloc(sizeof(int) * n * m);
-  if (gridHost == nullptr) {
-    fprintf(stderr, "Memory allocation failed!\n");
-    exit(1);
-  }
+  gridHost = (int*) HANDLE_NULLPTR(malloc(sizeof(int) * n * m));
 
   for (int i = 0; i < n * m; i++) {
     gridHost[i] = 1;
@@ -312,12 +308,7 @@ void Pathfinding::solve() {
   HANDLE_ERROR(cudaMemcpyToSymbol(endCuda, &end, sizeof(Coord)));
   HANDLE_ERROR(cudaMemcpyToSymbol(endNodeCuda, &endNode, sizeof(int)));
 
-  // TODO: handle errors
-  statesHost = (State*) malloc(sizeof(State) * TABLE_SIZE);
-  if (statesHost == nullptr) {
-    printf("malloc failed!\n");
-    exit(1);
-  }
+  statesHost = (State*) HANDLE_NULLPTR(malloc(sizeof(State) * TABLE_SIZE));
 
   for (int i = 0; i < TABLE_SIZE; i++) {
     statesHost[i] = State();
