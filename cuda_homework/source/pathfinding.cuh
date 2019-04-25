@@ -53,6 +53,7 @@ class Pathfinding {
  public:
   Pathfinding(const Config& config);
   void solve();
+  __device__ void findPath();
   void printGrid() const {
     for (int y = 0; y < m; y++) {
       for (int x = 0; x < n; x++) {
@@ -78,6 +79,7 @@ class Pathfinding {
   QState* queuesCuda = nullptr;
   int* queueSizesCuda = nullptr;
   int* hashtableCuda = nullptr;
+  bool* finishedCuda = nullptr;
   Lock lockCuda;
 
   __device__ __host__ size_t getPosition(int x, int y) const {
@@ -89,8 +91,5 @@ class Pathfinding {
   __device__ void lock();
   __device__ void unlock();
   __device__ void extract();
-  __device__ void expand();
-  __device__ void step();
-  __device__ void findPath();
 };
 
