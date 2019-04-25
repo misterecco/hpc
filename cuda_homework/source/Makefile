@@ -1,7 +1,7 @@
 CUDA_SOURCES := $(shell find . -name '*.cu')
 HEADERS := $(shell find . -name '*.h')
 CC := nvcc
-CCFLAGS := --gpu-architecture=compute_60 --gpu-code=sm_60 -rdc=true
+CCFLAGS := --gpu-architecture=compute_60 --gpu-code=sm_60 -rdc=true --compiler-options=-Wall -lineinfo
 
 all: astar_gpu heap_cpu
 

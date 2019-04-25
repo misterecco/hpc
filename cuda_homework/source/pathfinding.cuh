@@ -5,10 +5,10 @@
 #include "config.h"
 #include "lock.cuh"
 
-#define BLOCKS 28 
-#define THREADS_PER_BLOCK 128
-#define QUEUES_PER_BLOCK 128
-#define TABLE_SIZE 1024 * 1024 * 1024
+#define BLOCKS 2
+#define THREADS_PER_BLOCK 4
+#define QUEUES_PER_BLOCK 4
+#define TABLE_SIZE 128 * 1024 * 1024
 
 struct Coord {
   int x;
@@ -44,6 +44,10 @@ struct State {
 
   void clear() {
     node = -1;
+  }
+
+  void print() {
+    printf("node: %d, prev: %d, f: %d, g: %d\n", node, prev, f, g);
   }
 };
 
@@ -82,7 +86,7 @@ class Pathfinding {
   bool* finishedCuda = nullptr;
   Lock lockCuda;
 
-  __device__ __host__ size_t getPosition(int x, int y) const {
+  __device__ __host__ int getPosition(int x, int y) const {
     return y * n + x;
   }
 

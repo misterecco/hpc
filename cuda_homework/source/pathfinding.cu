@@ -158,26 +158,26 @@ __device__ void Pathfinding::extract() {
 __device__ void Pathfinding::findPath() {
   grid_group grid = this_grid();
 
-  while(true || !*finishedCuda) {
+  while(*finishedCuda == 0) {
     extract();
     if (threadIdx.x == 0 && blockDim.x == 0) {
-      int finished = true;
+      int finished = 1;
       for (int i = 0; i < BLOCKS * THREADS_PER_BLOCK; i++) {
         if (queueSizesCuda[i] > 0) {
-          finished = false;
+          finished = 0;
           break;
         }
       }
       if (finished) {
-        *finishedCuda = true;
+        *finishedCuda = 1;
       }
     }
     grid.sync();
   }
 }
 
-__global__ void kernel(Pathfinding* pathfinding) {
-  pathfinding->findPath();
+__global__ void kernel(Pathfinding pathfinding) {
+  pathfinding.findPath();
 }
 
 
@@ -188,19 +188,23 @@ void Pathfinding::solve() {
   printGrid();
 
   HANDLE_ERROR(cudaMalloc(&gridCuda, sizeof(State) * n * m));
-  HANDLE_ERROR(cudaMalloc(&statesCuda, sizeof(State) * n * m));
+  HANDLE_ERROR(cudaMalloc(&statesCuda, sizeof(State) * TABLE_SIZE));
   HANDLE_ERROR(cudaMalloc(&queuesCuda, sizeof(State) * BLOCKS * HEAP_SIZE));
   HANDLE_ERROR(cudaMalloc(&queueSizesCuda, sizeof(int) * BLOCKS *
         QUEUES_PER_BLOCK));
   HANDLE_ERROR(cudaMalloc(&hashtableCuda, sizeof(int) * TABLE_SIZE));
   HANDLE_ERROR(cudaMalloc(&statesSizeCuda, sizeof(int)));
-  HANDLE_ERROR(cudaMalloc(&finishedCuda, sizeof(bool)));
+  HANDLE_ERROR(cudaMalloc(&finishedCuda, sizeof(int)));
   HANDLE_ERROR(cudaMemcpyToSymbol(endCuda, &end, sizeof(Coord)));
 
   // TODO: handle errors
-  statesHost = (State*) malloc(sizeof(State) * n * m);
+  statesHost = (State*) malloc(sizeof(State) * TABLE_SIZE);
+  if (statesHost == nullptr) {
+    printf("malloc failed!\n");
+    exit(1);
+  }
 
-  for (int i = 0; i < n * m; i++) {
+  for (int i = 0; i < TABLE_SIZE; i++) {
     statesHost[i] = State();
   }
 
@@ -208,7 +212,7 @@ void Pathfinding::solve() {
   State initState = {
     .f = abs(start.x - end.x) + abs(start.y - end.y),
     .g = 0,
-    .prev = -1,
+    .prev = startNode,
     .node = startNode,
   };
   QState initQState = {
@@ -216,16 +220,21 @@ void Pathfinding::solve() {
     .stateNumber = 0,
   };
 
-  statesHost[startNode] = initState;
+  statesHost[0] = initState;
 
-  HANDLE_ERROR(cudaMemcpy(statesCuda, statesHost, sizeof(State) * n * m,
+  for (int i = 0; i <= 8; i++) {
+    printf("%d: ", i);
+    statesHost[i].print();
+  }
+
+  HANDLE_ERROR(cudaMemcpy(statesCuda, statesHost, sizeof(State) * TABLE_SIZE,
         cudaMemcpyHostToDevice));
   HANDLE_ERROR(cudaMemcpy(queuesCuda, &initQState, sizeof(QState),
         cudaMemcpyHostToDevice));
   HANDLE_ERROR(cudaMemset(queueSizesCuda, 0, sizeof(int) * BLOCKS *
         QUEUES_PER_BLOCK));
-  HANDLE_ERROR(cudaMemset(statesSizeCuda, 0, sizeof(int)));
-  HANDLE_ERROR(cudaMemset(finishedCuda, 0, sizeof(bool)));
+  HANDLE_ERROR(cudaMemset(statesSizeCuda, 1, 1));
+  HANDLE_ERROR(cudaMemset(finishedCuda, 0, sizeof(int)));
 
   int one = 1;
   HANDLE_ERROR(cudaMemcpy(queueSizesCuda, &one, sizeof(int),
@@ -233,15 +242,24 @@ void Pathfinding::solve() {
 
   // TODO: add timing
 
-
-  void *kernelArgs[] = {(void*) this};
+  void* kernelArgs[] = {(void*) this};
   HANDLE_ERROR(cudaLaunchCooperativeKernel((void*) kernel, BLOCKS,
-        THREADS_PER_BLOCK, kernelArgs));
+               THREADS_PER_BLOCK, kernelArgs));
+  //kernel<<<BLOCKS, THREADS_PER_BLOCK>>>(*this);
 
   printf("Computation finished!\n");
-                              
 
-  // TODO: copy back the results
+  HANDLE_ERROR(cudaPeekAtLastError());
+  HANDLE_ERROR(cudaDeviceSynchronize());
+  HANDLE_ERROR(cudaPeekAtLastError());
+                              
+  HANDLE_ERROR(cudaMemcpy(statesHost, statesCuda, sizeof(State) * TABLE_SIZE,
+        cudaMemcpyDeviceToHost));
+
+  for (int i = 0; i <= 8; i++) {
+    printf("%d: ", i);
+    statesHost[i].print();
+  }
   // TODO: recreate the path
 }
 
