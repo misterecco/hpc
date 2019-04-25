@@ -9,6 +9,7 @@
 using namespace cooperative_groups;
 
 __constant__ Coord endCuda;
+__constant__ int endNodeCuda;
 
 Pathfinding::Pathfinding (const Config& config) : config(config) {
   FILE* input = fopen(config.input_data.c_str(), "r");
@@ -44,6 +45,7 @@ Pathfinding::Pathfinding (const Config& config) : config(config) {
   }
 }
 
+// TODO: free all memory
 Pathfinding::~Pathfinding() {
   if (gridHost != nullptr) {
     free(gridHost);
@@ -92,7 +94,8 @@ __device__ bool Pathfinding::inBounds(int x, int y) {
   return x >= 0 && x < n && y >= 0 && y < m;
 }
 
-__device__ void Pathfinding::expand(State& st, int stateIdx, int firstFreeSlot) {
+__device__ void Pathfinding::expand(State& st, int stateIdx, int firstFreeSlot,
+                                    int& bestState) {
   if (st.isNull()) {
     return;
   }
@@ -120,6 +123,10 @@ __device__ void Pathfinding::expand(State& st, int stateIdx, int firstFreeSlot) 
         statesCuda[idx].g = st.g + gridCuda[newNode];
         statesCuda[idx].f = statesCuda[idx].g + abs(nx - endCuda.x) 
                             + abs(ny - endCuda.y);
+        if (newNode == endNodeCuda && (bestState == -1 || 
+              statesCuda[bestState].f < statesCuda[idx].f)) {
+          bestState = idx;
+        }
       }
 
       idx++;
@@ -132,7 +139,7 @@ __device__ void Pathfinding::expand(State& st, int stateIdx, int firstFreeSlot) 
   // }
 }
 
-__device__ void Pathfinding::extract() {
+__device__ void Pathfinding::extract(int& bestState) {
   int idx = threadIdx.x + blockIdx.x * blockDim.x;
   int blockOffset = blockIdx.x * blockDim.x;
 
@@ -162,19 +169,98 @@ __device__ void Pathfinding::extract() {
   for (int i = 0; i < 8 && !empty(queueSizesCuda[idx]); i++) {
     QState qst = pop(queuesCuda + HEAP_SIZE * idx, queueSizesCuda[idx]);
     State st = statesCuda[qst.stateNumber];
-    expand(st, qst.stateNumber, firstFreeSlot);
+    expand(st, qst.stateNumber, firstFreeSlot, bestState);
     firstFreeSlot += 8;
   }
 }
 
 __device__ void Pathfinding::findPath() {
   grid_group grid = this_grid();
+  int gti = threadIdx.x + blockIdx.x + blockDim.x;
+  int ti = threadIdx.x;
+  int bi = blockIdx.x;
+
+  __shared__ int bestTargetStates[THREADS_PER_BLOCK];
+  __shared__ int endCondition[THREADS_PER_BLOCK];
+
+  bestTargetStates[ti] = -1;
+  if (ti == 0) {
+    bestBlockStatesCuda[bi] = -1;
+  }
 
   while(*finishedCuda == 0) {
-    extract();
+    extract(bestTargetStates[ti]);
+
+    __syncthreads();
+
+    if (ti == 0) {
+      for (int i = 0; i < THREADS_PER_BLOCK; i++) {
+        int bestPerBlock = bestBlockStatesCuda[bi];
+        if (bestPerBlock != -1 && (bestTargetStates[i] == -1
+            || statesCuda[bestTargetStates[i]].f < statesCuda[bestPerBlock].f)) {
+          bestBlockStatesCuda[bi] = bestTargetStates[i];
+        }
+      }
+    }
+
     grid.sync();
 
-    if (threadIdx.x == 0 && blockIdx.x == 0) {
+    if (ti == 0 && bi == 0) {
+      for (int i = 0; i < BLOCKS; i++) {
+        int bestPerBlock = bestBlockStatesCuda[i];
+        if (bestPerBlock != -1 && (*bestStateCuda == -1
+            || statesCuda[bestPerBlock].f <
+            statesCuda[*bestStateCuda].f)) {
+          *bestStateCuda = bestPerBlock;
+        }
+      }
+    }
+
+    grid.sync();
+
+    if (*bestStateCuda != -1) {
+      if (empty(queueSizesCuda[gti])
+            || top(queuesCuda + HEAP_SIZE * gti, queueSizesCuda[gti]).f >
+            statesCuda[*bestStateCuda].f) {
+        endCondition[ti] = 1;
+      }
+
+      __syncthreads();
+
+      if (ti == 0) {
+        int finished = 1;
+        for (int i = 0; i < THREADS_PER_BLOCK; i++) {
+          if (!endCondition[i]) {
+            finished = 0;
+            break;
+          }
+        }
+        endConditionCuda[bi] = finished;
+      }
+
+      grid.sync();
+
+      if (ti == 0 && bi == 0) {
+        int finished = 1;
+        for (int i = 0; i < BLOCKS; i++) {
+          if (!endConditionCuda[i]) {
+            finished = 0;
+            break;
+          }
+        }
+        *finishedCuda = finished;
+      }
+
+      grid.sync();
+
+      if (*finishedCuda) {
+        break;
+      }
+    }
+
+    // TODO: end condition
+
+    if (ti == 0 && bi == 0) {
       int finished = 1;
       for (int i = 0; i < BLOCKS * THREADS_PER_BLOCK; i++) {
         printf("i: %d, queueSize: %d\n", i, queueSizesCuda[i]);
@@ -210,6 +296,8 @@ void Pathfinding::solve() {
   printf("end: %d, %d\n", end.x, end.y);
   printGrid();
 
+  int endNode = getPosition(end.x, end.y);
+
   HANDLE_ERROR(cudaMalloc(&gridCuda, sizeof(State) * n * m));
   HANDLE_ERROR(cudaMalloc(&statesCuda, sizeof(State) * TABLE_SIZE));
   HANDLE_ERROR(cudaMalloc(&queuesCuda, sizeof(State) * BLOCKS * HEAP_SIZE));
@@ -218,7 +306,11 @@ void Pathfinding::solve() {
   HANDLE_ERROR(cudaMalloc(&hashtableCuda, sizeof(int) * TABLE_SIZE));
   HANDLE_ERROR(cudaMalloc(&statesSizeCuda, sizeof(int)));
   HANDLE_ERROR(cudaMalloc(&finishedCuda, sizeof(int)));
+  HANDLE_ERROR(cudaMalloc(&bestStateCuda, sizeof(int)));
+  HANDLE_ERROR(cudaMalloc(&bestBlockStatesCuda, sizeof(int) * BLOCKS));
+  HANDLE_ERROR(cudaMalloc(&endConditionCuda, sizeof(int) * BLOCKS));
   HANDLE_ERROR(cudaMemcpyToSymbol(endCuda, &end, sizeof(Coord)));
+  HANDLE_ERROR(cudaMemcpyToSymbol(endNodeCuda, &endNode, sizeof(int)));
 
   // TODO: handle errors
   statesHost = (State*) malloc(sizeof(State) * TABLE_SIZE);
@@ -256,8 +348,11 @@ void Pathfinding::solve() {
         cudaMemcpyHostToDevice));
   HANDLE_ERROR(cudaMemcpy(queuesCuda, &initQState, sizeof(QState),
         cudaMemcpyHostToDevice));
+  HANDLE_ERROR(cudaMemcpy(bestStateCuda, &bestState, sizeof(int),
+        cudaMemcpyHostToDevice));
   HANDLE_ERROR(cudaMemset(queueSizesCuda, 0, sizeof(int) * BLOCKS *
         QUEUES_PER_BLOCK));
+  HANDLE_ERROR(cudaMemset(endConditionCuda, 0, sizeof(int) * BLOCKS));
   HANDLE_ERROR(cudaMemset(statesSizeCuda, 1, 1));
   HANDLE_ERROR(cudaMemset(finishedCuda, 0, sizeof(int)));
 
@@ -280,9 +375,13 @@ void Pathfinding::solve() {
                               
   HANDLE_ERROR(cudaMemcpy(statesHost, statesCuda, sizeof(State) * TABLE_SIZE,
         cudaMemcpyDeviceToHost));
+  HANDLE_ERROR(cudaMemcpy(&bestState, bestStateCuda, sizeof(int),
+        cudaMemcpyDeviceToHost));
 
   HANDLE_ERROR(cudaDeviceSynchronize());
   HANDLE_ERROR(cudaPeekAtLastError());
+
+  printf("bestState: %d\n", bestState);
 
   for (int i = 0; i <= 8; i++) {
     printf("%d: ", i);

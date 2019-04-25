@@ -23,6 +23,13 @@ __device__ void push(T* heap, int& heapSize, T st) {
 }
 
 template<typename T>
+__device__ T top(T* heap, int& heapSize) {
+  assert(heapSize > 0);
+
+  return heap[0];
+}
+
+template<typename T>
 __device__ T pop(T* heap, int& heapSize) {
   assert(heapSize > 0);
 

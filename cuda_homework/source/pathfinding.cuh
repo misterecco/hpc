@@ -8,7 +8,7 @@
 #define BLOCKS 2
 #define THREADS_PER_BLOCK 4
 #define QUEUES_PER_BLOCK 4
-#define TABLE_SIZE 128 * 1024 * 1024
+#define TABLE_SIZE 256 * 1024 * 1024
 
 struct Coord {
   int x;
@@ -38,8 +38,12 @@ struct State {
     return node == -1 || f == -1;
   }
 
-  bool equals(State& other) const {
+  __device__ __host__ bool equals(State& other) const {
     return other.node == node;
+  }
+
+  __device__ __host__ bool equals(int nd) const {
+    return node == nd;
   }
 
   void clear() {
@@ -90,16 +94,20 @@ class Pathfinding {
   int* queueSizesCuda = nullptr;
   int* hashtableCuda = nullptr;
   int* finishedCuda = nullptr;
+  int* bestStateCuda = nullptr;
+  int* bestBlockStatesCuda = nullptr;
+  int* endConditionCuda = nullptr;
+  int bestState = -1;
   Lock lockCuda;
 
   __device__ __host__ int getPosition(int x, int y) const {
     return y * n + x;
   }
 
-  __device__ void expand(State& st, int stateIdx, int firstFreeSlot);
+  __device__ void expand(State& st, int stateIdx, int firstFreeSlot, int& bestState);
   __device__ bool inBounds(int x, int y);
   __device__ void lock();
   __device__ void unlock();
-  __device__ void extract();
+  __device__ void extract(int& bestState);
 };
 
