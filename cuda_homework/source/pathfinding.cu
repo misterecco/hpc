@@ -18,7 +18,7 @@ Pathfinding::Pathfinding (const Config& config) : config(config) {
   fscanf(input, "%d,%d", &start.x, &start.y);
   fscanf(input, "%d,%d", &end.x, &end.y);
 
-  gridHost = (int*) HANDLE_NULLPTR(malloc(sizeof(int) * n * m));
+  gridHost = (int*) HANDLE_NULLPTR(malloc(sizeof(State) * n * m));
 
   for (int i = 0; i < n * m; i++) {
     gridHost[i] = 1;
@@ -118,6 +118,7 @@ __device__ void Pathfinding::expand(State& st, int stateIdx, int firstFreeSlot,
         statesCuda[idx].g = st.g + gridCuda[newNode];
         statesCuda[idx].f = statesCuda[idx].g + abs(nx - endCuda.x) 
                             + abs(ny - endCuda.y);
+
         if (newNode == endNodeCuda && (bestState == -1 || 
               statesCuda[bestState].f > statesCuda[idx].f)) {
           printf("Updating my bestState to: %d\n", idx);
@@ -129,6 +130,8 @@ __device__ void Pathfinding::expand(State& st, int stateIdx, int firstFreeSlot,
     }
   }
 }
+
+#define STATES_UNROLLED_PER_STEP 1
 
 __device__ void Pathfinding::extract(int& bestState) {
   int idx = threadIdx.x + blockIdx.x * blockDim.x;
@@ -142,11 +145,11 @@ __device__ void Pathfinding::extract(int& bestState) {
   if (threadIdx.x == 0) {
     offsets[0] = *statesSizeCuda;
     for (int i = 1; i < THREADS_PER_BLOCK; i++) {
-      offsets[i] = offsets[i-1] + 8 * min(8, queueSizesCuda[i - 1 + blockOffset]);
+      offsets[i] = offsets[i-1] + 
+        8 * min(STATES_UNROLLED_PER_STEP, queueSizesCuda[i - 1 + blockOffset]);
     }
     *statesSizeCuda = offsets[THREADS_PER_BLOCK - 1] +
-                      8 * min(8, queueSizesCuda[THREADS_PER_BLOCK - 1 +
-                          blockOffset]);
+                      8 * min(STATES_UNROLLED_PER_STEP, queueSizesCuda[THREADS_PER_BLOCK - 1 + blockOffset]);
     maxOffset = *statesSizeCuda;
     // printf("blockIdx: %d: ", blockIdx.x);
     // for (int i = 0; i < THREADS_PER_BLOCK; i++) {
@@ -159,9 +162,9 @@ __device__ void Pathfinding::extract(int& bestState) {
 
   int firstFreeSlot = offsets[threadIdx.x];
 
-  int expandedStatesCount = min(8, queueSizesCuda[idx]) * 8;
+  int expandedStatesCount = min(STATES_UNROLLED_PER_STEP, queueSizesCuda[idx]) * 8;
 
-  for (int i = 0; i < 8 && !empty(queueSizesCuda[idx]); i++) {
+  for (int i = 0; i < STATES_UNROLLED_PER_STEP && !empty(queueSizesCuda[idx]); i++) {
     QState qst = pop(queuesCuda + HEAP_SIZE * idx, queueSizesCuda[idx]);
     State st = statesCuda[qst.stateNumber];
     expand(st, qst.stateNumber, firstFreeSlot, bestState);
@@ -178,6 +181,8 @@ __device__ void Pathfinding::extract(int& bestState) {
   for (int i = offsets[0] + threadIdx.x; i < maxOffset; i += THREADS_PER_BLOCK) {
     State& newState = statesCuda[i];
     if (newState.isNull()) continue;
+
+    newState.print(n);
 
     QState queueEntry {
       .f = newState.f,
@@ -287,11 +292,13 @@ __device__ void Pathfinding::findPath() {
     }
 
     if (ti == 0 && bi == 0) {
+      /*
       printf("Hash table: \n");
       for (int i = 0; i < HASH_TABLE_SIZE; i++) {
         printf("%d ", hashtableCuda[i]);
       }
       printf("\n");
+      */
 
       int finished = 1;
       for (int i = 0; i < BLOCKS * THREADS_PER_BLOCK; i++) {
@@ -319,7 +326,7 @@ void Pathfinding::solve() {
   printf("n: %d, m: %d\n", n, m);
   printf("start: %d, %d\n", start.x, start.y);
   printf("end: %d, %d\n", end.x, end.y);
-  printGrid();
+  // printGrid();
 
   int endNode = getPosition(end.x, end.y);
 
@@ -338,6 +345,10 @@ void Pathfinding::solve() {
   HANDLE_ERROR(cudaMemcpyToSymbol(endCuda, &end, sizeof(Coord)));
   HANDLE_ERROR(cudaMemcpyToSymbol(endNodeCuda, &endNode, sizeof(int)));
 
+  HANDLE_ERROR(cudaDeviceSynchronize());
+  HANDLE_ERROR(cudaPeekAtLastError());
+  printf("cudaMallocs complete!\n");
+
   statesHost = (State*) HANDLE_NULLPTR(malloc(sizeof(State) * TABLE_SIZE));
 
   for (int i = 0; i < TABLE_SIZE; i++) {
@@ -348,7 +359,7 @@ void Pathfinding::solve() {
   State initState = {
     .f = abs(start.x - end.x) + abs(start.y - end.y),
     .g = 0,
-    .prev = startNode,
+    .prev = 0,
     .node = startNode,
   };
   QState initQState = {
@@ -375,6 +386,10 @@ void Pathfinding::solve() {
   int one = 1;
   HANDLE_ERROR(cudaMemcpy(queueSizesCuda, &one, sizeof(int),
         cudaMemcpyHostToDevice));
+
+  HANDLE_ERROR(cudaDeviceSynchronize());
+  HANDLE_ERROR(cudaPeekAtLastError());
+  printf("Memory transfers complete!\n");
 
   // TODO: add timing
 
@@ -415,6 +430,7 @@ void Pathfinding::solve() {
     printf("%d,%d\n", st.node % n, st.node / n);
     st = statesHost[abs(st.prev)];
   }
+  printf("%d,%d\n", st.node % n, st.node / n);
 }
 
 

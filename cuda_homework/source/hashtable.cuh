@@ -32,7 +32,7 @@ __device__ void deduplicate(State* states, int* hashtable, int stateNumber) {
   unsigned int hash = st.hash(seeds[z]);
   int tInd = atomicExch(hashtable + hash, stateNumber);
 
-  if (tInd != -1 && states[tInd].equals(st)) {
+  if (tInd != -1 && states[tInd].equals(st) && states[tInd].g <= st.g) {
     st.clear();
     return;
   }

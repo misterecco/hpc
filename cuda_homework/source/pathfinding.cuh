@@ -6,10 +6,10 @@
 #include "lock.cuh"
 
 #define BLOCKS 2
-#define THREADS_PER_BLOCK 4
-#define QUEUES_PER_BLOCK 4
-#define TABLE_SIZE 256 * 1024 * 1024
-#define HASH_TABLE_SIZE 256
+#define THREADS_PER_BLOCK 8
+#define QUEUES_PER_BLOCK 8
+#define TABLE_SIZE 64 * 1024 * 1024
+#define HASH_TABLE_SIZE 1024 * 1024
 
 struct Coord {
   int x;
