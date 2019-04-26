@@ -17,8 +17,8 @@ using namespace cooperative_groups;
 #define BLOCKS 2
 #define THREADS_PER_BLOCK 8
 #define QUEUES_PER_BLOCK 8
-#define TABLE_SIZE 64 * 1024 * 1024
-#define HASH_TABLE_SIZE 1024 * 1024
+#define TABLE_SIZE (64 * 1024 * 1024)
+#define HASH_TABLE_SIZE (1024 * 1024)
 
 template<typename Problem, typename State, typename QState>
 class Solver {
@@ -136,7 +136,7 @@ __device__ void Solver<Problem, State, QState>::extract(int& bestState) {
   }
 
   for (int i = 0; i < expandedStatesCount; i++) {
-    deduplicate(statesCuda, hashtableCuda, offsets[threadIdx.x] + i);
+    deduplicate(statesCuda, hashtableCuda, offsets[threadIdx.x] + i, HASH_TABLE_SIZE);
   }
 
   lock();
@@ -312,6 +312,14 @@ void Solver<Problem, State, QState>::solve() {
   printf("cudaMallocs complete!\n");
 
   statesHost = (State*) HANDLE_NULLPTR(malloc(sizeof(State) * TABLE_SIZE));
+
+  int* hashtableHost = (int*) HANDLE_NULLPTR(malloc(sizeof(int) * HASH_TABLE_SIZE));
+  for (int i = 0; i < HASH_TABLE_SIZE; i++) {
+    hashtableHost[i] = -1;
+  }
+  HANDLE_ERROR(cudaMemcpy(hashtableCuda, hashtableHost, sizeof(int) * HASH_TABLE_SIZE,
+        cudaMemcpyHostToDevice));
+  free(hashtableHost);
 
   for (int i = 0; i < TABLE_SIZE; i++) {
     statesHost[i] = State();

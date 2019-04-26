@@ -3,8 +3,8 @@
 #include "errors.h"
 #include "pathfinding.cuh"
 
-__constant__ Pathfinding::Coord endCuda;
-__constant__ int endNodeCuda;
+static __constant__ Pathfinding::Coord endCuda;
+static __constant__ int endNodeCuda;
 
 Pathfinding::Pathfinding (const Config& config) : config(config) {
   FILE* input = fopen(config.input_data.c_str(), "r");
@@ -92,8 +92,9 @@ __device__ void Pathfinding::expand(State* statesCuda, State& st, int stateIdx, 
         statesCuda[idx].prev = stateIdx;
         statesCuda[idx].node = newNode;
         statesCuda[idx].g = st.g + gridCuda[newNode];
-        statesCuda[idx].f = statesCuda[idx].g + abs(nx - endCuda.x)
-                            + abs(ny - endCuda.y);
+        statesCuda[idx].f = statesCuda[idx].g +
+                            max(abs(nx - endCuda.x), abs(ny - endCuda.y));
+        // statesCuda[idx].print(n);
 
         if (newNode == endNodeCuda && (bestState == -1 ||
               statesCuda[bestState].f > statesCuda[idx].f)) {
@@ -123,7 +124,7 @@ void Pathfinding::printGrid() const {
 Pathfinding::State Pathfinding::getInitState() {
   int startNode = getPosition(start.x, start.y);
   return {
-    .f = abs(start.x - end.x) + abs(start.y - end.y),
+    .f = max(abs(start.x - end.x), abs(start.y - end.y)),
     .g = 0,
     .prev = 0,
     .node = startNode,
@@ -151,5 +152,3 @@ void Pathfinding::expandSolution(State* statesHost, int bestState) {
   }
   printf("%d,%d\n", st.node % n, st.node / n);
 }
-
-

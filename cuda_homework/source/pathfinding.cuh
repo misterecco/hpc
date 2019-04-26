@@ -1,15 +1,11 @@
+#pragma once
+
 #include <cstdio>
 #include <limits>
 #include <vector>
 
 #include "config.h"
 #include "lock.cuh"
-
-#define BLOCKS 2
-#define THREADS_PER_BLOCK 8
-#define QUEUES_PER_BLOCK 8
-#define TABLE_SIZE 64 * 1024 * 1024
-#define HASH_TABLE_SIZE 1024 * 1024
 
 namespace pathfinding {
 
@@ -26,11 +22,11 @@ struct QState {
 struct State {
   int f = -1;
   int g = -1;
-  int prev = -1; // y * n + x
+  int prev = -1;
   int node = -1; // y * n + x
 
-  __device__ unsigned int hash(unsigned int a) const {
-    unsigned int result = (a * node) % HASH_TABLE_SIZE;
+  __device__ unsigned int hash(unsigned long long a, int tableSize) const {
+    unsigned int result = (a * node) % tableSize;
     // result = ((result + f) * a) % TABLE_SIZE;
     // result = ((result + g) * a) % TABLE_SIZE;
     return result;
@@ -76,6 +72,9 @@ class Pathfinding {
   void expandSolution(State* statesHost, int bestState);
 
   __device__ void expand(State* statesCuda, State& st, int stateIdx, int firstFreeSlot, int& bestState);
+  __device__ __host__ int getPosition(int x, int y) const;
+  __device__ bool inBounds(int x, int y);
+  void printGrid() const;
 
   const Config config;
   int n; // x coords
@@ -84,9 +83,4 @@ class Pathfinding {
   Coord end;
   int* gridHost = nullptr;
   int* gridCuda = nullptr;
-
-  __device__ __host__ int getPosition(int x, int y) const;
-  __device__ void expand(State& st, int stateIdx, int firstFreeSlot, int& bestState);
-  __device__ bool inBounds(int x, int y);
-  void printGrid() const;
 };

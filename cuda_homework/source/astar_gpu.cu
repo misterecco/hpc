@@ -3,6 +3,7 @@
 
 #include "config.h"
 #include "pathfinding.cuh"
+#include "slidingpuzzle.cuh"
 #include "solver.cuh"
 
 using std::string;
@@ -61,8 +62,8 @@ int main(int argc, char** argv) {
       Version::SLIDING ? "sliding" : "pathfinding", config.input_data.c_str(),
       config.output_data.c_str()); */
   if (config.version == Version::SLIDING) {
-    printf("This part is not implemented yet\n");
-    exit(1);
+    Solver<SlidingPuzzle, SlidingPuzzle::State, SlidingPuzzle::QState>
+      slidingPuzzleSolver(config);
   } else {
     Solver<Pathfinding, Pathfinding::State, Pathfinding::QState>
       pathfindingSolver(config);

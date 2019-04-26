@@ -8,8 +8,11 @@ all: astar_gpu heap_cpu
 pathfinding.o: pathfinding.cu pathfinding.cuh errors.h
 	$(CC) $(CCFLAGS) -c $@ $<
 
-astar_gpu: astar_gpu.cu pathfinding.o solver.cuh
-	$(CC) $(CCFLAGS) -o $@ $< pathfinding.o
+slidingpuzzle.o: slidingpuzzle.cu slidingpuzzle.cuh errors.h
+	$(CC) $(CCFLAGS) -c $@ $<
+
+astar_gpu: astar_gpu.cu pathfinding.o slidingpuzzle.o solver.cuh hashtable.cuh
+	$(CC) $(CCFLAGS) -o $@ $< pathfinding.o slidingpuzzle.o
 
 heap_cpu: heap_cpu.cpp
 	clang++ -o $@ $^ --std=c++11
