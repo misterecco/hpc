@@ -11,6 +11,8 @@
 #define TABLE_SIZE 64 * 1024 * 1024
 #define HASH_TABLE_SIZE 1024 * 1024
 
+namespace pathfinding {
+
 struct Coord {
   int x;
   int y;
@@ -47,28 +49,34 @@ struct State {
   }
 
   __device__ __host__ void print(int n) {
-    printf("node.x: %d, node.y: %d, prev: %d, f: %d, g: %d\n", 
+    printf("node.x: %d, node.y: %d, prev: %d, f: %d, g: %d\n",
         node == -1 ? -1 : node % n, node == -1 ? -1 : node / n, prev, f, g);
   }
+
+  __device__ __host__ void printNode(int n) {
+    printf("%d,%d\n", node == -1 ? -1 : node % n,
+      node == -1 ? -1 : node / n);
+  }
 };
+
+} // pathfinding
+
 
 class Pathfinding {
  public:
   Pathfinding(const Config& config);
-  void solve();
-  __device__ void findPath();
-  void printGrid() const {
-    for (int y = 0; y < m; y++) {
-      for (int x = 0; x < n; x++) {
-        printf("%d ", gridHost[getPosition(x, y)]);
-      }
-      printf("\n");
-    }
-  }
-
   ~Pathfinding();
 
- private:
+  typedef pathfinding::Coord Coord;
+  typedef pathfinding::QState QState;
+  typedef pathfinding::State State;
+
+  State getInitState();
+  QState getInitQState();
+  void expandSolution(State* statesHost, int bestState);
+
+  __device__ void expand(State* statesCuda, State& st, int stateIdx, int firstFreeSlot, int& bestState);
+
   const Config config;
   int n; // x coords
   int m; // y coords
@@ -76,27 +84,9 @@ class Pathfinding {
   Coord end;
   int* gridHost = nullptr;
   int* gridCuda = nullptr;
-  State* statesHost = nullptr;
-  State* statesCuda = nullptr;
-  int* statesSizeCuda = nullptr;
-  QState* queuesCuda = nullptr;
-  int* queueSizesCuda = nullptr;
-  int* hashtableCuda = nullptr;
-  int* finishedCuda = nullptr;
-  int* bestStateCuda = nullptr;
-  int* bestBlockStatesCuda = nullptr;
-  int* endConditionCuda = nullptr;
-  int bestState = -1;
-  Lock lockCuda;
 
-  __device__ __host__ int getPosition(int x, int y) const {
-    return y * n + x;
-  }
-
+  __device__ __host__ int getPosition(int x, int y) const;
   __device__ void expand(State& st, int stateIdx, int firstFreeSlot, int& bestState);
   __device__ bool inBounds(int x, int y);
-  __device__ void lock();
-  __device__ void unlock();
-  __device__ void extract(int& bestState);
+  void printGrid() const;
 };
-

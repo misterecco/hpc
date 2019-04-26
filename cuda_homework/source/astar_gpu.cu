@@ -3,6 +3,7 @@
 
 #include "config.h"
 #include "pathfinding.cuh"
+#include "solver.cuh"
 
 using std::string;
 
@@ -63,8 +64,9 @@ int main(int argc, char** argv) {
     printf("This part is not implemented yet\n");
     exit(1);
   } else {
-    Pathfinding pathfinding(config);
-    pathfinding.solve();
+    Solver<Pathfinding, Pathfinding::State, Pathfinding::QState>
+      pathfindingSolver(config);
+    pathfindingSolver.solve();
   }
 
   return 0;
