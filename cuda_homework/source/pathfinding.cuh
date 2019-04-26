@@ -9,6 +9,7 @@
 #define THREADS_PER_BLOCK 4
 #define QUEUES_PER_BLOCK 4
 #define TABLE_SIZE 256 * 1024 * 1024
+#define HASH_TABLE_SIZE 256
 
 struct Coord {
   int x;
@@ -26,16 +27,15 @@ struct State {
   int prev = -1; // y * n + x
   int node = -1; // y * n + x
 
-  typedef unsigned int Seed;
-
-  static const std::vector<Seed> seeds;
-
-  __device__ unsigned int hash(Seed a) const {
-    return (a * node) % TABLE_SIZE;
+  __device__ unsigned int hash(unsigned int a) const {
+    unsigned int result = (a * node) % HASH_TABLE_SIZE;
+    // result = ((result + f) * a) % TABLE_SIZE;
+    // result = ((result + g) * a) % TABLE_SIZE;
+    return result;
   }
 
   __device__ __host__ bool isNull() const {
-    return node == -1 || f == -1;
+    return prev < 0;
   }
 
   __device__ __host__ bool equals(State& other) const {
@@ -43,7 +43,7 @@ struct State {
   }
 
   __device__ void clear() {
-    node = -1;
+    prev = -1 * abs(prev);
   }
 
   __device__ __host__ void print(int n) {
@@ -51,8 +51,6 @@ struct State {
         node == -1 ? -1 : node % n, node == -1 ? -1 : node / n, prev, f, g);
   }
 };
-
-static const State::Seed seeds[2] = {100000007u, 350002487u};
 
 class Pathfinding {
  public:

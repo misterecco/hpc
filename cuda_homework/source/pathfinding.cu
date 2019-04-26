@@ -96,7 +96,7 @@ __device__ void Pathfinding::expand(State& st, int stateIdx, int firstFreeSlot,
     return;
   }
 
-  st.print(n);
+  // st.print(n);
 
   int x = st.node % n;
   int y = st.node / n;
@@ -128,11 +128,6 @@ __device__ void Pathfinding::expand(State& st, int stateIdx, int firstFreeSlot,
       idx++;
     }
   }
-
-  // for (int i = 0; i <= 8; i++) {
-    // printf("%d: ", i);
-    // statesCuda[i].print(n);
-  // }
 }
 
 __device__ void Pathfinding::extract(int& bestState) {
@@ -174,9 +169,7 @@ __device__ void Pathfinding::extract(int& bestState) {
   }
 
   for (int i = 0; i < expandedStatesCount; i++) {
-    // TODO: fix seeds
-    deduplicate<State, State::Seed>(statesCuda, hashtableCuda, 
-                                    nullptr, offsets[threadIdx.x] + i);
+    deduplicate(statesCuda, hashtableCuda, offsets[threadIdx.x] + i);
   }
 
   lock();
@@ -294,6 +287,12 @@ __device__ void Pathfinding::findPath() {
     }
 
     if (ti == 0 && bi == 0) {
+      printf("Hash table: \n");
+      for (int i = 0; i < HASH_TABLE_SIZE; i++) {
+        printf("%d ", hashtableCuda[i]);
+      }
+      printf("\n");
+
       int finished = 1;
       for (int i = 0; i < BLOCKS * THREADS_PER_BLOCK; i++) {
         printf("i: %d, queueSize: %d\n", i, queueSizesCuda[i]);
@@ -308,13 +307,6 @@ __device__ void Pathfinding::findPath() {
     }
 
     grid.sync();
-  }
-
-  if (threadIdx.x == 0 && blockIdx.x == 0) {
-    for (int i = 0; i <= 8; i++) {
-      printf("%d: ", i);
-      statesCuda[i].print(n);
-    }
   }
 }
 
@@ -337,7 +329,7 @@ void Pathfinding::solve() {
         sizeof(QState) * THREADS_PER_BLOCK * BLOCKS * HEAP_SIZE));
   HANDLE_ERROR(cudaMalloc(&queueSizesCuda, sizeof(int) * BLOCKS *
         QUEUES_PER_BLOCK));
-  HANDLE_ERROR(cudaMalloc(&hashtableCuda, sizeof(int) * TABLE_SIZE));
+  HANDLE_ERROR(cudaMalloc(&hashtableCuda, sizeof(int) * HASH_TABLE_SIZE));
   HANDLE_ERROR(cudaMalloc(&statesSizeCuda, sizeof(int)));
   HANDLE_ERROR(cudaMalloc(&finishedCuda, sizeof(int)));
   HANDLE_ERROR(cudaMalloc(&bestStateCuda, sizeof(int)));
@@ -365,11 +357,6 @@ void Pathfinding::solve() {
   };
 
   statesHost[0] = initState;
-
-  for (int i = 0; i <= 8; i++) {
-    printf("%d: ", i);
-    statesHost[i].print(n);
-  }
 
   HANDLE_ERROR(cudaMemcpy(gridCuda, gridHost, sizeof(State) * n * m,
         cudaMemcpyHostToDevice));
@@ -412,6 +399,11 @@ void Pathfinding::solve() {
 
   printf("bestState: %d\n", bestState);
 
+  if (bestState == -1) {
+    printf("Unreachable\n");
+    return;
+  }
+
   State& st = statesHost[bestState];
   int initNode = getPosition(start.x, start.y);
 
@@ -421,14 +413,8 @@ void Pathfinding::solve() {
   // TODO: write to file
   while(st.node != initNode) {
     printf("%d,%d\n", st.node % n, st.node / n);
-    st = statesHost[st.prev];
+    st = statesHost[abs(st.prev)];
   }
-
-  for (int i = 0; i <= 8; i++) {
-    printf("%d: ", i);
-    statesHost[i].print(n);
-  }
-  // TODO: recreate the path
 }
 
 

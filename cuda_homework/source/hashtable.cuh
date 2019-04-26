@@ -5,22 +5,25 @@
 #include <vector>
 
 
-template<typename State, typename Seed>
-__device__ void deduplicate(State* states, int* hashtable, 
-                            Seed* sds, int stateNumber) {
+template<typename State>
+__device__ void deduplicate(State* states, int* hashtable, int stateNumber) {
   State& st = states[stateNumber];
   if (st.isNull()) {
     return;
   }
-  const Seed seeds[2] = {100000007u, 350002487u};
+  // TODO: store seeds in constant memory
+  const unsigned int seeds[4] = {100000007u, 350002487u, 700003991u, 12345743u};
   int z = 0;
-  // TODO: pass seeds somehow - preferably use constant memory
-  int d = 2;
+  int d = 4;
 
   for (int j = 0; j < d; j++) {
     unsigned int hash = st.hash(seeds[j]);
     int val = hashtable[hash];
-    if (val == -1 || states[val].equals(st)) {
+    if (val != -1 && states[val].equals(st) && states[val].g <= st.g) {
+      st.clear();
+      return;
+    }
+    if (val == -1 || (states[val].equals(st) && st.g < states[val].g)) {
       z = j;
       break;
     }
@@ -29,7 +32,7 @@ __device__ void deduplicate(State* states, int* hashtable,
   unsigned int hash = st.hash(seeds[z]);
   int tInd = atomicExch(hashtable + hash, stateNumber);
 
-  if (tInd != -1 && states[tInd].equals(st) && states[tInd].g <= st.g) {
+  if (tInd != -1 && states[tInd].equals(st)) {
     st.clear();
     return;
   }
