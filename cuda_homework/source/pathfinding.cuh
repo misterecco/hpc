@@ -30,7 +30,7 @@ struct State {
 
   static const std::vector<Seed> seeds;
 
-  unsigned int hash(Seed a) const {
+  __device__ unsigned int hash(Seed a) const {
     return (a * node) % TABLE_SIZE;
   }
 
@@ -42,26 +42,17 @@ struct State {
     return other.node == node;
   }
 
-  __device__ __host__ bool equals(int nd) const {
-    return node == nd;
-  }
-
-  void clear() {
+  __device__ void clear() {
     node = -1;
   }
 
   __device__ __host__ void print(int n) {
-    printf("node.x: %d, node.y: %d, prev.x: %d, prev.y: %d, f: %d, g: %d\n", 
-        node == -1 ? -1 : node % n,
-        node == -1 ? -1 : node / n, 
-        prev == -1 ? -1 : prev % n,
-        prev == -1 ? -1 : prev / n,
-        f, 
-        g);
+    printf("node.x: %d, node.y: %d, prev: %d, f: %d, g: %d\n", 
+        node == -1 ? -1 : node % n, node == -1 ? -1 : node / n, prev, f, g);
   }
 };
 
-static const std::vector<State::Seed> seeds = {100000007u, 350002487u};
+static const State::Seed seeds[2] = {100000007u, 350002487u};
 
 class Pathfinding {
  public:

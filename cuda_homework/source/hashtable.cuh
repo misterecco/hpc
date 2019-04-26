@@ -7,13 +7,15 @@
 
 template<typename State, typename Seed>
 __device__ void deduplicate(State* states, int* hashtable, 
-                            const std::vector<Seed>& seeds, int& stateNumber) {
+                            Seed* sds, int stateNumber) {
   State& st = states[stateNumber];
   if (st.isNull()) {
     return;
   }
+  const Seed seeds[2] = {100000007u, 350002487u};
   int z = 0;
-  int d = seeds.size();
+  // TODO: pass seeds somehow - preferably use constant memory
+  int d = 2;
 
   for (int j = 0; j < d; j++) {
     unsigned int hash = st.hash(seeds[j]);
@@ -24,13 +26,10 @@ __device__ void deduplicate(State* states, int* hashtable,
     }
   }
 
-  State t = st;
   unsigned int hash = st.hash(seeds[z]);
   int tInd = atomicExch(hashtable + hash, stateNumber);
 
-  // TODO: check if I should look at f value
-
-  if (tInd != -1 && states[tInd].equals(st)) {
+  if (tInd != -1 && states[tInd].equals(st) && states[tInd].g <= st.g) {
     st.clear();
     return;
   }
@@ -38,7 +37,7 @@ __device__ void deduplicate(State* states, int* hashtable,
   for (int j = 0; j < d; j++) {
     unsigned int hash = st.hash(seeds[j]);
     int val = hashtable[hash];
-    if (j != z && val != -1 && states[val].equals(st)) {
+    if (j != z && val != -1 && states[val].equals(st) && states[val].g <= st.g) {
       st.clear();
       return;
     }

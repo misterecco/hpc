@@ -96,7 +96,6 @@ __device__ void Pathfinding::expand(State& st, int stateIdx, int firstFreeSlot,
     return;
   }
 
-  // printf("Expanding state: ");
   st.print(n);
 
   int x = st.node % n;
@@ -120,7 +119,8 @@ __device__ void Pathfinding::expand(State& st, int stateIdx, int firstFreeSlot,
         statesCuda[idx].f = statesCuda[idx].g + abs(nx - endCuda.x) 
                             + abs(ny - endCuda.y);
         if (newNode == endNodeCuda && (bestState == -1 || 
-              statesCuda[bestState].f < statesCuda[idx].f)) {
+              statesCuda[bestState].f > statesCuda[idx].f)) {
+          printf("Updating my bestState to: %d\n", idx);
           bestState = idx;
         }
       }
@@ -140,6 +140,7 @@ __device__ void Pathfinding::extract(int& bestState) {
   int blockOffset = blockIdx.x * blockDim.x;
 
   __shared__ int offsets[THREADS_PER_BLOCK];
+  __shared__ int maxOffset;
 
   lock();
 
@@ -151,6 +152,7 @@ __device__ void Pathfinding::extract(int& bestState) {
     *statesSizeCuda = offsets[THREADS_PER_BLOCK - 1] +
                       8 * min(8, queueSizesCuda[THREADS_PER_BLOCK - 1 +
                           blockOffset]);
+    maxOffset = *statesSizeCuda;
     // printf("blockIdx: %d: ", blockIdx.x);
     // for (int i = 0; i < THREADS_PER_BLOCK; i++) {
     //   printf("%d ", offsets[i]);
@@ -162,17 +164,46 @@ __device__ void Pathfinding::extract(int& bestState) {
 
   int firstFreeSlot = offsets[threadIdx.x];
 
+  int expandedStatesCount = min(8, queueSizesCuda[idx]) * 8;
+
   for (int i = 0; i < 8 && !empty(queueSizesCuda[idx]); i++) {
     QState qst = pop(queuesCuda + HEAP_SIZE * idx, queueSizesCuda[idx]);
     State st = statesCuda[qst.stateNumber];
     expand(st, qst.stateNumber, firstFreeSlot, bestState);
     firstFreeSlot += 8;
   }
+
+  for (int i = 0; i < expandedStatesCount; i++) {
+    // TODO: fix seeds
+    deduplicate<State, State::Seed>(statesCuda, hashtableCuda, 
+                                    nullptr, offsets[threadIdx.x] + i);
+  }
+
+  lock();
+
+  int targetBlock = (blockIdx.x + threadIdx.x) % BLOCKS;
+  for (int i = offsets[0] + threadIdx.x; i < maxOffset; i += THREADS_PER_BLOCK) {
+    State& newState = statesCuda[i];
+    if (newState.isNull()) continue;
+
+    QState queueEntry {
+      .f = newState.f,
+      .stateNumber = i,
+    };
+
+    push(queuesCuda + HEAP_SIZE * (THREADS_PER_BLOCK * targetBlock +
+          threadIdx.x), queueSizesCuda[THREADS_PER_BLOCK * targetBlock +
+        threadIdx.x], queueEntry);
+
+    targetBlock = (targetBlock + 1) % BLOCKS;
+  }
+
+  unlock();
 }
 
 __device__ void Pathfinding::findPath() {
   grid_group grid = this_grid();
-  int gti = threadIdx.x + blockIdx.x + blockDim.x;
+  int gti = threadIdx.x + blockIdx.x * blockDim.x;
   int ti = threadIdx.x;
   int bi = blockIdx.x;
 
@@ -184,6 +215,10 @@ __device__ void Pathfinding::findPath() {
     bestBlockStatesCuda[bi] = -1;
   }
 
+  if (ti == 0 && bi == 0) {
+    printf("Target state node: %d\n", endNodeCuda);
+  }
+
   while(*finishedCuda == 0) {
     extract(bestTargetStates[ti]);
 
@@ -192,8 +227,8 @@ __device__ void Pathfinding::findPath() {
     if (ti == 0) {
       for (int i = 0; i < THREADS_PER_BLOCK; i++) {
         int bestPerBlock = bestBlockStatesCuda[bi];
-        if (bestPerBlock != -1 && (bestTargetStates[i] == -1
-            || statesCuda[bestTargetStates[i]].f < statesCuda[bestPerBlock].f)) {
+        if (bestPerBlock == -1 || (bestTargetStates[i] != -1
+            && statesCuda[bestTargetStates[i]].f < statesCuda[bestPerBlock].f)) {
           bestBlockStatesCuda[bi] = bestTargetStates[i];
         }
       }
@@ -205,8 +240,7 @@ __device__ void Pathfinding::findPath() {
       for (int i = 0; i < BLOCKS; i++) {
         int bestPerBlock = bestBlockStatesCuda[i];
         if (bestPerBlock != -1 && (*bestStateCuda == -1
-            || statesCuda[bestPerBlock].f <
-            statesCuda[*bestStateCuda].f)) {
+            || statesCuda[bestPerBlock].f < statesCuda[*bestStateCuda].f)) {
           *bestStateCuda = bestPerBlock;
         }
       }
@@ -215,6 +249,11 @@ __device__ void Pathfinding::findPath() {
     grid.sync();
 
     if (*bestStateCuda != -1) {
+      if (ti == 0 && bi == 0) {
+        printf("Best state: ");
+        statesCuda[*bestStateCuda].print(n);
+      }
+
       if (empty(queueSizesCuda[gti])
             || top(queuesCuda + HEAP_SIZE * gti, queueSizesCuda[gti]).f >
             statesCuda[*bestStateCuda].f) {
@@ -254,15 +293,13 @@ __device__ void Pathfinding::findPath() {
       }
     }
 
-    // TODO: end condition
-
     if (ti == 0 && bi == 0) {
       int finished = 1;
       for (int i = 0; i < BLOCKS * THREADS_PER_BLOCK; i++) {
         printf("i: %d, queueSize: %d\n", i, queueSizesCuda[i]);
         if (queueSizesCuda[i] > 0) {
           finished = 0;
-          break;
+          // break;
         }
       }
       if (finished) {
@@ -296,7 +333,8 @@ void Pathfinding::solve() {
 
   HANDLE_ERROR(cudaMalloc(&gridCuda, sizeof(State) * n * m));
   HANDLE_ERROR(cudaMalloc(&statesCuda, sizeof(State) * TABLE_SIZE));
-  HANDLE_ERROR(cudaMalloc(&queuesCuda, sizeof(State) * BLOCKS * HEAP_SIZE));
+  HANDLE_ERROR(cudaMalloc(&queuesCuda, 
+        sizeof(QState) * THREADS_PER_BLOCK * BLOCKS * HEAP_SIZE));
   HANDLE_ERROR(cudaMalloc(&queueSizesCuda, sizeof(int) * BLOCKS *
         QUEUES_PER_BLOCK));
   HANDLE_ERROR(cudaMalloc(&hashtableCuda, sizeof(int) * TABLE_SIZE));
@@ -373,6 +411,18 @@ void Pathfinding::solve() {
   HANDLE_ERROR(cudaPeekAtLastError());
 
   printf("bestState: %d\n", bestState);
+
+  State& st = statesHost[bestState];
+  int initNode = getPosition(start.x, start.y);
+
+  printf("path:\n");
+
+  // TODO: invert the list
+  // TODO: write to file
+  while(st.node != initNode) {
+    printf("%d,%d\n", st.node % n, st.node / n);
+    st = statesHost[st.prev];
+  }
 
   for (int i = 0; i <= 8; i++) {
     printf("%d: ", i);
