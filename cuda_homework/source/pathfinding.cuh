@@ -66,6 +66,7 @@ class Pathfinding {
   typedef pathfinding::Coord Coord;
   typedef pathfinding::QState QState;
   typedef pathfinding::State State;
+  static const int statesUnrolledPerStep = 8;
 
   State getInitState();
   QState getInitQState();

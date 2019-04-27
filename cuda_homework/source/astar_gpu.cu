@@ -64,6 +64,7 @@ int main(int argc, char** argv) {
   if (config.version == Version::SLIDING) {
     Solver<SlidingPuzzle, SlidingPuzzle::State, SlidingPuzzle::QState>
       slidingPuzzleSolver(config);
+    slidingPuzzleSolver.solve();
   } else {
     Solver<Pathfinding, Pathfinding::State, Pathfinding::QState>
       pathfindingSolver(config);

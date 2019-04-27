@@ -14,9 +14,9 @@
 
 using namespace cooperative_groups;
 
-#define BLOCKS 2
-#define THREADS_PER_BLOCK 8
-#define QUEUES_PER_BLOCK 8
+#define BLOCKS 1
+#define THREADS_PER_BLOCK 1
+#define QUEUES_PER_BLOCK 1
 #define TABLE_SIZE (64 * 1024 * 1024)
 #define HASH_TABLE_SIZE (1024 * 1024)
 
@@ -94,7 +94,7 @@ __device__ void Solver<Problem, State, QState>::unlock() {
   __syncthreads();
 }
 
-#define STATES_UNROLLED_PER_STEP 1
+#define UNROLLING_ROUNDS 1
 
 template<typename Problem, typename State, typename QState>
 __device__ void Solver<Problem, State, QState>::extract(int& bestState) {
@@ -110,10 +110,12 @@ __device__ void Solver<Problem, State, QState>::extract(int& bestState) {
     offsets[0] = *statesSizeCuda;
     for (int i = 1; i < THREADS_PER_BLOCK; i++) {
       offsets[i] = offsets[i-1] +
-        8 * min(STATES_UNROLLED_PER_STEP, queueSizesCuda[i - 1 + blockOffset]);
+          Problem::statesUnrolledPerStep
+          * min(UNROLLING_ROUNDS, queueSizesCuda[i - 1 + blockOffset]);
     }
     *statesSizeCuda = offsets[THREADS_PER_BLOCK - 1] +
-                      8 * min(STATES_UNROLLED_PER_STEP, queueSizesCuda[THREADS_PER_BLOCK - 1 + blockOffset]);
+        Problem::statesUnrolledPerStep
+        * min(UNROLLING_ROUNDS, queueSizesCuda[THREADS_PER_BLOCK - 1 + blockOffset]);
     maxOffset = *statesSizeCuda;
     // printf("blockIdx: %d: ", blockIdx.x);
     // for (int i = 0; i < THREADS_PER_BLOCK; i++) {
@@ -126,13 +128,14 @@ __device__ void Solver<Problem, State, QState>::extract(int& bestState) {
 
   int firstFreeSlot = offsets[threadIdx.x];
 
-  int expandedStatesCount = min(STATES_UNROLLED_PER_STEP, queueSizesCuda[idx]) * 8;
+  int expandedStatesCount = min(UNROLLING_ROUNDS, queueSizesCuda[idx])
+                            * Problem::statesUnrolledPerStep;
 
-  for (int i = 0; i < STATES_UNROLLED_PER_STEP && !empty(queueSizesCuda[idx]); i++) {
+  for (int i = 0; i < UNROLLING_ROUNDS && !empty(queueSizesCuda[idx]); i++) {
     QState qst = pop(queuesCuda + HEAP_SIZE * idx, queueSizesCuda[idx]);
     State st = statesCuda[qst.stateNumber];
     problem->expand(statesCuda, st, qst.stateNumber, firstFreeSlot, bestState);
-    firstFreeSlot += 8;
+    firstFreeSlot += Problem::statesUnrolledPerStep;
   }
 
   for (int i = 0; i < expandedStatesCount; i++) {
@@ -141,6 +144,7 @@ __device__ void Solver<Problem, State, QState>::extract(int& bestState) {
 
   lock();
 
+  // TODO: think about better state distribution
   int targetBlock = (blockIdx.x + threadIdx.x) % BLOCKS;
   for (int i = offsets[0] + threadIdx.x; i < maxOffset; i += THREADS_PER_BLOCK) {
     State& newState = statesCuda[i];
