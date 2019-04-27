@@ -2,6 +2,7 @@
 
 #include "errors.h"
 #include "pathfinding.cuh"
+#include "memory.h"
 
 static __constant__ Pathfinding::Coord endCuda;
 static __constant__ int endNodeCuda;
@@ -51,15 +52,9 @@ Pathfinding::Pathfinding (const Config& config) : config(config) {
   HANDLE_ERROR(cudaDeviceSynchronize());
 }
 
-// TODO: free all memory
 Pathfinding::~Pathfinding() {
-  if (gridHost != nullptr) {
-    free(gridHost);
-  }
-
-  if (gridCuda != nullptr) {
-    cudaFree(gridCuda);
-  }
+  maybeFree(gridHost);
+  maybeCudaFree(gridCuda);
 }
 
 __device__ bool Pathfinding::inBounds(int x, int y) {

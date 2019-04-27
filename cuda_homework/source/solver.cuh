@@ -11,6 +11,7 @@
 #include "hashtable.cuh"
 #include "heap.cuh"
 #include "lock.cuh"
+#include "memory.h"
 
 using namespace cooperative_groups;
 
@@ -52,30 +53,19 @@ template<typename Problem, typename State, typename QState>
 Solver<Problem, State, QState>::Solver(const Config& config)
  : problem(new Problem(config)) { }
 
-// TODO: free all memory
 template<typename Problem, typename State, typename QState>
 Solver<Problem, State, QState>::~Solver() {
   delete problem;
-
-  if (statesHost != nullptr) {
-    free(statesHost);
-  }
-
-  if (statesCuda != nullptr) {
-    cudaFree(statesCuda);
-  }
-
-  if (queuesCuda != nullptr) {
-    cudaFree(queuesCuda);
-  }
-
-  if (queueSizesCuda != nullptr) {
-    cudaFree(queueSizesCuda);
-  }
-
-  if (hashtableCuda != nullptr) {
-    cudaFree(hashtableCuda);
-  }
+  maybeFree(statesHost);
+  maybeCudaFree(statesCuda);
+  maybeCudaFree(statesSizeCuda);
+  maybeCudaFree(queuesCuda);
+  maybeCudaFree(queueSizesCuda);
+  maybeCudaFree(hashtableCuda);
+  maybeCudaFree(finishedCuda);
+  maybeCudaFree(bestStateCuda);
+  maybeCudaFree(bestBlockStatesCuda);
+  maybeCudaFree(endConditionCuda);
 }
 
 template<typename Problem, typename State, typename QState>
