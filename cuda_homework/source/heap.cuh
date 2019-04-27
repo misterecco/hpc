@@ -1,6 +1,6 @@
 #pragma once
 
-#define HEAP_SIZE 64 * 1024
+#define HEAP_SIZE 8 * 1024
 
 template<typename T>
 __device__ void swap(T* heap, int a, int b) {

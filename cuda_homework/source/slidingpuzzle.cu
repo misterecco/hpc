@@ -77,13 +77,13 @@ __device__ void SlidingPuzzle::expand(State* statesCuda, State& st, int stateIdx
           int tpos = numberToPositionCuda[num];
           int xt = tpos % 5;
           int yt = tpos % 5;
-          h += abs(xp - xt) + abs(yp - yt);
+          h += num != 0 ? abs(xp - xt) + abs(yp - yt) : 0;
         }
 
         statesCuda[idx].prev = stateIdx;
         statesCuda[idx].node = newNode;
         statesCuda[idx].g = st.g + 1;
-        statesCuda[idx].f = statesCuda[idx].g + h / 2;
+        statesCuda[idx].f = statesCuda[idx].g + h;
 
         // statesCuda[idx].print(0);
 
@@ -107,11 +107,11 @@ SlidingPuzzle::State SlidingPuzzle::getInitState() const {
     int tpos = numberToPosition[num];
     int xt = tpos % 5;
     int yt = tpos % 5;
-    h += abs(xp - xt) + abs(yp - yt);
+    h += num != 0 ? abs(xp - xt) + abs(yp - yt) : 0;
   }
 
   return {
-    .f = h / 2,
+    .f = h,
     .g = 0,
     .prev = 0,
     .node = startNode,

@@ -14,11 +14,11 @@
 
 using namespace cooperative_groups;
 
-#define BLOCKS 8
-#define THREADS_PER_BLOCK 8
-#define QUEUES_PER_BLOCK 8
+#define BLOCKS 16
+#define THREADS_PER_BLOCK 256
+#define QUEUES_PER_BLOCK 256
 #define TABLE_SIZE (64 * 1024 * 1024)
-#define HASH_TABLE_SIZE (1024 * 1024)
+#define HASH_TABLE_SIZE (64 * 1024 * 1024)
 
 template<typename Problem, typename State, typename QState>
 class Solver {
