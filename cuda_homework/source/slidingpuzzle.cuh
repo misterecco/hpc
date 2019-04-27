@@ -31,7 +31,7 @@ struct PuzzleConfig {
 
   __device__ __host__ void print() const {
     for (int i = 0; i < 25; i++) {
-      printf("%d ", board[i]);
+      printf(i == 24 ? "%d" : "%d,", board[i]);
     }
   }
 

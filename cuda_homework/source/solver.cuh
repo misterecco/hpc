@@ -14,9 +14,9 @@
 
 using namespace cooperative_groups;
 
-#define BLOCKS 1
-#define THREADS_PER_BLOCK 1
-#define QUEUES_PER_BLOCK 1
+#define BLOCKS 8
+#define THREADS_PER_BLOCK 8
+#define QUEUES_PER_BLOCK 8
 #define TABLE_SIZE (64 * 1024 * 1024)
 #define HASH_TABLE_SIZE (1024 * 1024)
 
@@ -150,7 +150,7 @@ __device__ void Solver<Problem, State, QState>::extract(int& bestState) {
     State& newState = statesCuda[i];
     if (newState.isNull()) continue;
 
-    newState.print(problem->n);
+    // newState.print(problem->n);
 
     QState queueEntry {
       .f = newState.f,
@@ -276,7 +276,7 @@ __device__ void Solver<Problem, State, QState>::findSolution() {
         printf("i: %d, queueSize: %d\n", i, queueSizesCuda[i]);
         if (queueSizesCuda[i] > 0) {
           finished = 0;
-          // break;
+          break;
         }
       }
       if (finished) {

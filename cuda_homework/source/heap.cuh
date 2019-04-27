@@ -1,6 +1,6 @@
 #pragma once
 
-#define HEAP_SIZE 8192
+#define HEAP_SIZE 64 * 1024
 
 template<typename T>
 __device__ void swap(T* heap, int a, int b) {
@@ -12,7 +12,7 @@ __device__ void swap(T* heap, int a, int b) {
 template<typename T>
 __device__ void push(T* heap, int& heapSize, T st) {
   assert(heapSize < HEAP_SIZE);
-  
+
   heap[heapSize] = st;
   int child = heapSize++;
 
@@ -44,7 +44,7 @@ __device__ T pop(T* heap, int& heapSize) {
     int leftChild = 2 * k + 1;
     int rightChild = 2 * k + 2;
 
-    if ((rightChild < heapSize && heap[leftChild].f < heap[rightChild].f) 
+    if ((rightChild < heapSize && heap[leftChild].f < heap[rightChild].f)
         || rightChild == heapSize) {
       if (leftChild < heapSize && heap[leftChild].f < last.f) {
         swap(heap, k, leftChild);

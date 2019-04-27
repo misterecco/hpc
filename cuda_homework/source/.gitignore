@@ -1,3 +1,4 @@
 astar_gpu
 pathfinding.o
 heap_cpu
+slidingpuzzle.o

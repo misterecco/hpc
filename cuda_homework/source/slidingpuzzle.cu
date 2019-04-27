@@ -56,7 +56,7 @@ __device__ void SlidingPuzzle::expand(State* statesCuda, State& st, int stateIdx
     return;
   }
 
-  st.print(0);
+  // st.print(0);
 
   int idx = firstFreeSlot;
   int x = st.node.zeroLoc % 5;
@@ -83,9 +83,9 @@ __device__ void SlidingPuzzle::expand(State* statesCuda, State& st, int stateIdx
         statesCuda[idx].prev = stateIdx;
         statesCuda[idx].node = newNode;
         statesCuda[idx].g = st.g + 1;
-        statesCuda[idx].f = statesCuda[idx].g + h;
+        statesCuda[idx].f = statesCuda[idx].g + h / 2;
 
-        statesCuda[idx].print(0);
+        // statesCuda[idx].print(0);
 
         if (newNode == endNodeCuda && (bestState == -1 ||
             statesCuda[bestState].f > statesCuda[idx].f)) {
@@ -111,7 +111,7 @@ SlidingPuzzle::State SlidingPuzzle::getInitState() const {
   }
 
   return {
-    .f = h,
+    .f = h / 2,
     .g = 0,
     .prev = 0,
     .node = startNode,
@@ -135,7 +135,9 @@ void SlidingPuzzle::expandSolution(State* statesHost, int bestState) {
   // TODO: write to file
   while(st.node != startNode) {
     st.node.print();
+    printf("\n");
     st = statesHost[abs(st.prev)];
   }
   st.node.print();
+  printf("\n");
 }
