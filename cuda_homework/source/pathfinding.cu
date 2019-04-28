@@ -42,7 +42,6 @@ Pathfinding::Pathfinding (const Config& config) : config(config) {
   printf("n: %d, m: %d\n", n, m);
   printf("start: %d, %d\n", start.x, start.y);
   printf("end: %d, %d\n", end.x, end.y);
-  // printGrid();
 
   int endNode = getPosition(end.x, end.y);
 
@@ -89,7 +88,6 @@ __device__ void Pathfinding::expand(State* statesCuda, State& st, int stateIdx,
       int newNode = getPosition(nx, ny);
 
       if (inBounds(nx, ny) && gridCuda[newNode] != -1) {
-        // printf("Expanded node: %d, %d, index: %d\n", nx, ny, idx);
         statesCuda[idx].prev = stateIdx;
         statesCuda[idx].node = newNode;
         statesCuda[idx].g = st.g + gridCuda[newNode];
@@ -98,7 +96,6 @@ __device__ void Pathfinding::expand(State* statesCuda, State& st, int stateIdx,
         if (hashtable.contains(statesCuda, idx)) {
           continue;
         }
-        // statesCuda[idx].print(n);
 
         if (newNode == endNodeCuda && (bestState == -1 ||
               statesCuda[bestState].f > statesCuda[idx].f)) {

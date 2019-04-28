@@ -59,8 +59,6 @@ SlidingPuzzle::SlidingPuzzle (const Config& config) : config(config) {
     return;
   }
 
-  // st.print(0);
-
   int x = st.node.zeroLoc % 5;
   int y = st.node.zeroLoc / 5;
 
@@ -94,9 +92,6 @@ SlidingPuzzle::SlidingPuzzle (const Config& config) : config(config) {
         if (hashtable.contains(statesCuda, idx)) {
           continue;
         }
-
-        // printf("g: %d ", statesCuda[idx].g);
-        // statesCuda[idx].print(0);
 
         if (newNode == endNodeCuda && (bestState == -1 ||
             statesCuda[bestState].f > statesCuda[idx].f)) {
