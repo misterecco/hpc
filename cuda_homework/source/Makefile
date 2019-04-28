@@ -1,5 +1,5 @@
 CC := nvcc
-CCFLAGS := --gpu-architecture=compute_60 --gpu-code=sm_60 -std=c++14 -rdc=true --compiler-options=-Wall -lineinfo -g
+CCFLAGS := --gpu-architecture=compute_60 --gpu-code=sm_60 -std=c++14 -rdc=true --compiler-options="-Wall -O3" -O3
 
 all: astar_gpu
 
