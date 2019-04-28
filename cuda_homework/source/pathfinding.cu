@@ -1,4 +1,6 @@
+#include <algorithm>
 #include <assert.h>
+#include <vector>
 
 #include "errors.h"
 #include "pathfinding.cuh"
@@ -146,13 +148,16 @@ void Pathfinding::printSolution(State* statesHost, int bestState) {
   State& st = statesHost[bestState];
   int initNode = getPosition(start.x, start.y);
 
-  printf("path:\n");
-
-  // TODO: invert the list
   // TODO: write to file
+  std::vector<int> path;
   while(st.node != initNode) {
-    printf("%d,%d\n", st.node % n, st.node / n);
+    path.push_back(st.node);
     st = statesHost[abs(st.prev)];
   }
-  printf("%d,%d\n", st.node % n, st.node / n);
+  path.push_back(st.node);
+  std::reverse(path.begin(), path.end());
+
+  for (int node : path) {
+    printf("%d,%d\n", node % n, node / n);
+  }
 }

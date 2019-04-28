@@ -1,4 +1,6 @@
+#include <algorithm>
 #include <assert.h>
+#include <vector>
 
 #include "errors.h"
 #include "slidingpuzzle.cuh"
@@ -129,7 +131,6 @@ SlidingPuzzle::State SlidingPuzzle::getInitState() const {
   };
 }
 
-// TODO: This doesn't change across different problems
 SlidingPuzzle::QState SlidingPuzzle::getInitQState() const {
   State initState = getInitState();
   return {
@@ -141,15 +142,17 @@ SlidingPuzzle::QState SlidingPuzzle::getInitQState() const {
 void SlidingPuzzle::printSolution(State* statesHost, int bestState) {
   State& st = statesHost[bestState];
 
-  printf("path:\n");
-
-  // TODO: invert the list
   // TODO: write to file
+  std::vector<PuzzleConfig> path;
   while(st.node != startNode) {
-    st.node.print();
-    printf("\n");
+    path.push_back(st.node);
     st = statesHost[abs(st.prev)];
   }
-  st.node.print();
-  printf("\n");
+  path.push_back(st.node);
+  std::reverse(path.begin(), path.end());
+
+  for (PuzzleConfig& node : path) {
+    node.print();
+    printf("\n");
+  }
 }
