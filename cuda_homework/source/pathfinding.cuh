@@ -6,6 +6,7 @@
 
 #include "config.h"
 #include "lock.cuh"
+#include "hashtable.cuh"
 
 namespace pathfinding {
 
@@ -72,7 +73,9 @@ class Pathfinding {
   QState getInitQState();
   void expandSolution(State* statesHost, int bestState);
 
-  __device__ void expand(State* statesCuda, State& st, int stateIdx, int firstFreeSlot, int& bestState);
+__device__ void expand(State* statesCuda, State& st, int stateIdx,
+                       const Hashtable<State>& hashtable, int freeSlots[8],
+                       int usedSlots[8], int& bestState);
   __device__ __host__ int getPosition(int x, int y) const;
   __device__ bool inBounds(int x, int y);
   void printGrid() const;

@@ -6,6 +6,7 @@
 
 #include "config.h"
 #include "lock.cuh"
+#include "hashtable.cuh"
 
 namespace slidingpuzzle {
 
@@ -109,7 +110,9 @@ class SlidingPuzzle {
   void expandSolution(State* statesHost, int bestState);
   static const int statesUnrolledPerStep = 4;
 
-  __device__ void expand(State* statesCuda, State& st, int stateIdx, int firstFreeSlot, int& bestState);
+  __device__ void expand(State* statesCuda, State& st, int stateIdx,
+                         const Hashtable<State>& hashtable, int freeSlots[8],
+                         int usedSlots[8], int& bestState);
 
   const Config config;
   PuzzleConfig startNode;

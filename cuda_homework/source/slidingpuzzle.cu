@@ -50,21 +50,25 @@ SlidingPuzzle::SlidingPuzzle (const Config& config) : config(config) {
   HANDLE_ERROR(cudaDeviceSynchronize());
 }
 
-__device__ void SlidingPuzzle::expand(State* statesCuda, State& st, int stateIdx, int firstFreeSlot,
-                                    int& bestState) {
+  __device__ void SlidingPuzzle::expand(State* statesCuda, State& st, int stateIdx,
+                         const Hashtable<State>& hashtable, int freeSlots[8],
+                         int usedSlots[8], int& bestState) {
   if (st.isNull()) {
     return;
   }
 
   // st.print(0);
 
-  int idx = firstFreeSlot;
   int x = st.node.zeroLoc % 5;
   int y = st.node.zeroLoc / 5;
+
+  int slotIdx = 0;
 
   for (int i : {-1, 0, 1}) {
     for (int j : {-1, 0, 1}) {
       if (i * j != 0 || (i == 0 && j == 0)) continue;
+
+      int idx = freeSlots[slotIdx];
 
       if (x + i >= 0 && x + i < 5 && y + j >= 0 && y + j < 5) {
         PuzzleConfig newNode = st.node.swap(i, j);
@@ -85,6 +89,10 @@ __device__ void SlidingPuzzle::expand(State* statesCuda, State& st, int stateIdx
         statesCuda[idx].g = st.g + 1;
         statesCuda[idx].f = statesCuda[idx].g + h;
 
+        if (hashtable.contains(statesCuda, idx)) {
+          continue;
+        }
+
         // statesCuda[idx].print(0);
 
         if (newNode == endNodeCuda && (bestState == -1 ||
@@ -92,8 +100,10 @@ __device__ void SlidingPuzzle::expand(State* statesCuda, State& st, int stateIdx
           printf("Updating my bestState to: %d\n", idx);
           bestState = idx;
         }
+
+        usedSlots[slotIdx] = idx;
+        freeSlots[slotIdx++] = -1;
       }
-      idx++;
     }
   }
 }

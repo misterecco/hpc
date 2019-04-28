@@ -15,10 +15,12 @@
 
 using namespace cooperative_groups;
 
-#define BLOCKS 2
-#define THREADS_PER_BLOCK 8
+#define BLOCKS 4
+#define THREADS_PER_BLOCK 4
 #define TABLE_SIZE (64 * 1024 * 1024)
 #define HASH_TABLE_SIZE (64 * 1024 * 1024)
+#define UNROLLING_ROUNDS 1
+#define ALLOC_PACK 8
 
 template<typename Problem, typename State, typename QState>
 class Solver {
@@ -29,6 +31,9 @@ class Solver {
   ~Solver();
 
   Problem* problem;
+  Lock lockCuda;
+  Queues<8 * 8192, BLOCKS * THREADS_PER_BLOCK, QState> queues;
+  Hashtable<State> hashtable;
 
   State* statesHost = nullptr;
   State* statesCuda = nullptr;
@@ -38,18 +43,15 @@ class Solver {
   int* bestBlockStatesCuda = nullptr;
   int* endConditionCuda = nullptr;
   int bestState = -1;
-  Lock lockCuda;
-  Queues<8 * 8192, BLOCKS * THREADS_PER_BLOCK, QState> queues;
-  Hashtable<HASH_TABLE_SIZE, State> hashtable;
 
   __device__ void lock();
   __device__ void unlock();
-  __device__ void extract(int& bestState);
+  __device__ void extract(int& bestState, int freeSlots[ALLOC_PACK]);
 };
 
 template<typename Problem, typename State, typename QState>
 Solver<Problem, State, QState>::Solver(const Config& config)
- : problem(new Problem(config)) { }
+ : problem(new Problem(config)), hashtable(HASH_TABLE_SIZE) { }
 
 template<typename Problem, typename State, typename QState>
 Solver<Problem, State, QState>::~Solver() {
@@ -79,67 +81,94 @@ __device__ void Solver<Problem, State, QState>::unlock() {
   __syncthreads();
 }
 
-#define UNROLLING_ROUNDS 1
-
 template<typename Problem, typename State, typename QState>
-__device__ void Solver<Problem, State, QState>::extract(int& bestState) {
+__device__ void Solver<Problem, State, QState>::extract(int& bestState,
+          int freeSlots[ALLOC_PACK]) {
   int idx = threadIdx.x + blockIdx.x * blockDim.x;
-  int blockOffset = blockIdx.x * blockDim.x;
+  // int blockOffset = blockIdx.x * blockDim.x;
 
-  __shared__ int offsets[THREADS_PER_BLOCK];
-  __shared__ int maxOffset;
-
-  lock();
+  int usedSlots[ALLOC_PACK] = {-1, -1, -1, -1, -1, -1, -1, -1};
+  __shared__ int usedSlotsBlock[ALLOC_PACK * THREADS_PER_BLOCK];
+  __shared__ int usbIdx;
 
   if (threadIdx.x == 0) {
-    offsets[0] = *statesSizeCuda;
-    for (int i = 1; i < THREADS_PER_BLOCK; i++) {
-      offsets[i] = offsets[i-1] +
-          Problem::statesUnrolledPerStep
-          * min(UNROLLING_ROUNDS, queues.size(i - 1 + blockOffset));
-    }
-    *statesSizeCuda = offsets[THREADS_PER_BLOCK - 1] +
-        Problem::statesUnrolledPerStep
-        * min(UNROLLING_ROUNDS, queues.size(THREADS_PER_BLOCK - 1 + blockOffset));
-    maxOffset = *statesSizeCuda;
-    // printf("blockIdx: %d: ", blockIdx.x);
-    // for (int i = 0; i < THREADS_PER_BLOCK; i++) {
-    //   printf("%d ", offsets[i]);
-    // }
-    // printf("\n");
+    usbIdx = 0;
+  }
+  __syncthreads();
+
+  int requestCount = 0;
+  for (int i = 0; i < ALLOC_PACK; i++) {
+    if (freeSlots[i] != -1) break;
+    requestCount++;
   }
 
-  unlock();
+  if (requestCount > 0) {
+    int firstFreeSlot = atomicAdd(statesSizeCuda, requestCount);
 
-  int firstFreeSlot = offsets[threadIdx.x];
+    for (int i = 0; i < requestCount; i++) {
+      freeSlots[i] = firstFreeSlot + i;
+    }
+  }
 
+  // TODO: should I keep this loop? If so - adjust ALLOC_PACK
   int expandedStatesCount = min(UNROLLING_ROUNDS, queues.size(idx))
                             * Problem::statesUnrolledPerStep;
 
   for (int i = 0; i < UNROLLING_ROUNDS && !queues.empty(idx); i++) {
     QState qst = queues.pop(idx);
     State st = statesCuda[qst.stateNumber];
-    problem->expand(statesCuda, st, qst.stateNumber, firstFreeSlot, bestState);
-    firstFreeSlot += Problem::statesUnrolledPerStep;
+    // printf("expanding: stNum: %d ", qst.stateNumber);
+    // st.print(problem->n);
+    problem->expand(statesCuda, st, qst.stateNumber, hashtable, freeSlots,
+                    usedSlots, bestState);
   }
 
-  for (int i = 0; i < expandedStatesCount; i++) {
-    hashtable.deduplicate(statesCuda, offsets[threadIdx.x] + i);
+  /*
+  printf("usedSlots:");
+  for (int i = 0; i < ALLOC_PACK; i++) {
+    printf("%d ", usedSlots[i]);
   }
+  printf("\n");
+  */
+
+  int usedSlotsCount = 0;
+  for (int i = 0; i < expandedStatesCount; i++) {
+    if (usedSlots[i] == -1) break;
+    usedSlotsCount++;
+    hashtable.deduplicate(statesCuda, usedSlots[i]);
+  }
+
+  int firstInd = atomicAdd(&usbIdx, usedSlotsCount);
+
+  for (int i = 0; i < usedSlotsCount; i++) {
+    usedSlotsBlock[firstInd + i] = usedSlots[i];
+  }
+
+  /*
+  printf("Used slots block: ");
+  for (int i = 0; i < usbIdx; i++) {
+    printf("%d ", usedSlotsBlock[i]);
+  }
+  printf("\n");
+  */
 
   lock();
 
+  // printf("after dedup\n");
+
   // TODO: think about better state distribution
   int targetBlock = (blockIdx.x + threadIdx.x) % BLOCKS;
-  for (int i = offsets[0] + threadIdx.x; i < maxOffset; i += THREADS_PER_BLOCK) {
-    State& newState = statesCuda[i];
+  for (int i = threadIdx.x; i < usbIdx; i += THREADS_PER_BLOCK) {
+    const int stNum = usedSlotsBlock[i];
+
+    State& newState = statesCuda[stNum];
     if (newState.isNull()) continue;
 
     // newState.print(problem->n);
 
     QState queueEntry {
       .f = newState.f,
-      .stateNumber = i,
+      .stateNumber = stNum,
     };
 
     queues.push(THREADS_PER_BLOCK * targetBlock + threadIdx.x, queueEntry);
@@ -159,6 +188,11 @@ __device__ void Solver<Problem, State, QState>::findSolution() {
 
   __shared__ int bestTargetStates[THREADS_PER_BLOCK];
   __shared__ int endCondition[THREADS_PER_BLOCK];
+  int allocatedFreeSlots[ALLOC_PACK];
+
+  for (int i = 0; i < ALLOC_PACK; i++) {
+    allocatedFreeSlots[i] = -1;
+  }
 
   bestTargetStates[ti] = -1;
   if (ti == 0) {
@@ -172,7 +206,7 @@ __device__ void Solver<Problem, State, QState>::findSolution() {
   */
 
   while(*finishedCuda == 0) {
-    extract(bestTargetStates[ti]);
+    extract(bestTargetStates[ti], allocatedFreeSlots);
 
     __syncthreads();
 

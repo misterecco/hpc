@@ -3,6 +3,7 @@
 #include "errors.h"
 #include "pathfinding.cuh"
 #include "memory.h"
+#include "hashtable.cuh"
 
 static __constant__ Pathfinding::Coord endCuda;
 static __constant__ int endNodeCuda;
@@ -61,8 +62,9 @@ __device__ bool Pathfinding::inBounds(int x, int y) {
   return x >= 0 && x < n && y >= 0 && y < m;
 }
 
-__device__ void Pathfinding::expand(State* statesCuda, State& st, int stateIdx, int firstFreeSlot,
-                                    int& bestState) {
+__device__ void Pathfinding::expand(State* statesCuda, State& st, int stateIdx,
+                                    const Hashtable<State>& hashtable, int freeSlots[8],
+                                    int usedSlots[8], int& bestState) {
   if (st.isNull()) {
     return;
   }
@@ -72,11 +74,13 @@ __device__ void Pathfinding::expand(State* statesCuda, State& st, int stateIdx, 
   int x = st.node % n;
   int y = st.node / n;
 
-  int idx = firstFreeSlot;
+  int slotIdx = 0;
 
   for (int i : {-1, 0, 1}) {
     for (int j : {-1, 0, 1}) {
       if (i == 0 && j == 0) continue;
+
+      int idx = freeSlots[slotIdx];
 
       int nx = x + i;
       int ny = y + j;
@@ -89,6 +93,9 @@ __device__ void Pathfinding::expand(State* statesCuda, State& st, int stateIdx, 
         statesCuda[idx].g = st.g + gridCuda[newNode];
         statesCuda[idx].f = statesCuda[idx].g +
                             max(abs(nx - endCuda.x), abs(ny - endCuda.y));
+        if (hashtable.contains(statesCuda, idx)) {
+          continue;
+        }
         // statesCuda[idx].print(n);
 
         if (newNode == endNodeCuda && (bestState == -1 ||
@@ -96,9 +103,10 @@ __device__ void Pathfinding::expand(State* statesCuda, State& st, int stateIdx, 
           printf("Updating my bestState to: %d\n", idx);
           bestState = idx;
         }
-      }
 
-      idx++;
+        usedSlots[slotIdx] = idx;
+        freeSlots[slotIdx++] = -1;
+      }
     }
   }
 }
