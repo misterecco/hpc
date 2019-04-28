@@ -127,8 +127,9 @@ Pathfinding::State Pathfinding::getInitState() {
 }
 
 Pathfinding::QState Pathfinding::getInitQState() {
+  int startNode = getPosition(start.x, start.y);
   return {
-    .f = 0,
+    .f = max(abs(start.x - end.x), abs(start.y - end.y)),
     .stateNumber = 0,
   };
 }

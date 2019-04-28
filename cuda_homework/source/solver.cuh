@@ -15,9 +15,8 @@
 
 using namespace cooperative_groups;
 
-#define BLOCKS 16
-#define THREADS_PER_BLOCK 256
-#define QUEUES_PER_BLOCK 256
+#define BLOCKS 2
+#define THREADS_PER_BLOCK 8
 #define TABLE_SIZE (64 * 1024 * 1024)
 #define HASH_TABLE_SIZE (64 * 1024 * 1024)
 
@@ -34,8 +33,6 @@ class Solver {
   State* statesHost = nullptr;
   State* statesCuda = nullptr;
   int* statesSizeCuda = nullptr;
-  QState* queuesCuda = nullptr;
-  int* queueSizesCuda = nullptr;
   int* hashtableCuda = nullptr;
   int* finishedCuda = nullptr;
   int* bestStateCuda = nullptr;
@@ -43,6 +40,7 @@ class Solver {
   int* endConditionCuda = nullptr;
   int bestState = -1;
   Lock lockCuda;
+  Queues<8 * 8192, BLOCKS * THREADS_PER_BLOCK, QState> queues;
 
   __device__ void lock();
   __device__ void unlock();
@@ -59,8 +57,6 @@ Solver<Problem, State, QState>::~Solver() {
   maybeFree(statesHost);
   maybeCudaFree(statesCuda);
   maybeCudaFree(statesSizeCuda);
-  maybeCudaFree(queuesCuda);
-  maybeCudaFree(queueSizesCuda);
   maybeCudaFree(hashtableCuda);
   maybeCudaFree(finishedCuda);
   maybeCudaFree(bestStateCuda);
@@ -101,11 +97,11 @@ __device__ void Solver<Problem, State, QState>::extract(int& bestState) {
     for (int i = 1; i < THREADS_PER_BLOCK; i++) {
       offsets[i] = offsets[i-1] +
           Problem::statesUnrolledPerStep
-          * min(UNROLLING_ROUNDS, queueSizesCuda[i - 1 + blockOffset]);
+          * min(UNROLLING_ROUNDS, queues.size(i - 1 + blockOffset));
     }
     *statesSizeCuda = offsets[THREADS_PER_BLOCK - 1] +
         Problem::statesUnrolledPerStep
-        * min(UNROLLING_ROUNDS, queueSizesCuda[THREADS_PER_BLOCK - 1 + blockOffset]);
+        * min(UNROLLING_ROUNDS, queues.size(THREADS_PER_BLOCK - 1 + blockOffset));
     maxOffset = *statesSizeCuda;
     // printf("blockIdx: %d: ", blockIdx.x);
     // for (int i = 0; i < THREADS_PER_BLOCK; i++) {
@@ -118,11 +114,11 @@ __device__ void Solver<Problem, State, QState>::extract(int& bestState) {
 
   int firstFreeSlot = offsets[threadIdx.x];
 
-  int expandedStatesCount = min(UNROLLING_ROUNDS, queueSizesCuda[idx])
+  int expandedStatesCount = min(UNROLLING_ROUNDS, queues.size(idx))
                             * Problem::statesUnrolledPerStep;
 
-  for (int i = 0; i < UNROLLING_ROUNDS && !empty(queueSizesCuda[idx]); i++) {
-    QState qst = pop(queuesCuda + HEAP_SIZE * idx, queueSizesCuda[idx]);
+  for (int i = 0; i < UNROLLING_ROUNDS && !queues.empty(idx); i++) {
+    QState qst = queues.pop(idx);
     State st = statesCuda[qst.stateNumber];
     problem->expand(statesCuda, st, qst.stateNumber, firstFreeSlot, bestState);
     firstFreeSlot += Problem::statesUnrolledPerStep;
@@ -147,9 +143,7 @@ __device__ void Solver<Problem, State, QState>::extract(int& bestState) {
       .stateNumber = i,
     };
 
-    push(queuesCuda + HEAP_SIZE * (THREADS_PER_BLOCK * targetBlock +
-          threadIdx.x), queueSizesCuda[THREADS_PER_BLOCK * targetBlock +
-        threadIdx.x], queueEntry);
+    queues.push(THREADS_PER_BLOCK * targetBlock + threadIdx.x, queueEntry);
 
     targetBlock = (targetBlock + 1) % BLOCKS;
   }
@@ -213,9 +207,7 @@ __device__ void Solver<Problem, State, QState>::findSolution() {
         statesCuda[*bestStateCuda].print(problem->n);
       }
 
-      if (empty(queueSizesCuda[gti])
-            || top(queuesCuda + HEAP_SIZE * gti, queueSizesCuda[gti]).f >
-            statesCuda[*bestStateCuda].f) {
+      if (queues.empty(gti) || queues.top(gti).f > statesCuda[*bestStateCuda].f) {
         endCondition[ti] = 1;
       }
 
@@ -263,10 +255,10 @@ __device__ void Solver<Problem, State, QState>::findSolution() {
 
       int finished = 1;
       for (int i = 0; i < BLOCKS * THREADS_PER_BLOCK; i++) {
-        printf("i: %d, queueSize: %d\n", i, queueSizesCuda[i]);
-        if (queueSizesCuda[i] > 0) {
+        printf("i: %d, queueSize: %d\n", i, queues.size(i));
+        if (queues.size(i) > 0) {
           finished = 0;
-          break;
+          // break;
         }
       }
       if (finished) {
@@ -290,10 +282,6 @@ __global__ void kernel(
 template<typename Problem, typename State, typename QState>
 void Solver<Problem, State, QState>::solve() {
   HANDLE_ERROR(cudaMalloc(&statesCuda, sizeof(State) * TABLE_SIZE));
-  HANDLE_ERROR(cudaMalloc(&queuesCuda,
-        sizeof(QState) * THREADS_PER_BLOCK * BLOCKS * HEAP_SIZE));
-  HANDLE_ERROR(cudaMalloc(&queueSizesCuda, sizeof(int) * BLOCKS *
-        QUEUES_PER_BLOCK));
   HANDLE_ERROR(cudaMalloc(&hashtableCuda, sizeof(int) * HASH_TABLE_SIZE));
   HANDLE_ERROR(cudaMalloc(&statesSizeCuda, sizeof(int)));
   HANDLE_ERROR(cudaMalloc(&finishedCuda, sizeof(int)));
@@ -322,23 +310,18 @@ void Solver<Problem, State, QState>::solve() {
   State initState = problem->getInitState();
   QState initQState = problem->getInitQState();
 
+  queues.init(initQState);
+
   statesHost[0] = initState;
 
   HANDLE_ERROR(cudaMemcpy(statesCuda, statesHost, sizeof(State) * TABLE_SIZE,
         cudaMemcpyHostToDevice));
-  HANDLE_ERROR(cudaMemcpy(queuesCuda, &initQState, sizeof(QState),
-        cudaMemcpyHostToDevice));
   HANDLE_ERROR(cudaMemcpy(bestStateCuda, &bestState, sizeof(int),
         cudaMemcpyHostToDevice));
-  HANDLE_ERROR(cudaMemset(queueSizesCuda, 0, sizeof(int) * BLOCKS *
-        QUEUES_PER_BLOCK));
   HANDLE_ERROR(cudaMemset(endConditionCuda, 0, sizeof(int) * BLOCKS));
   HANDLE_ERROR(cudaMemset(statesSizeCuda, 1, 1));
   HANDLE_ERROR(cudaMemset(finishedCuda, 0, sizeof(int)));
 
-  int one = 1;
-  HANDLE_ERROR(cudaMemcpy(queueSizesCuda, &one, sizeof(int),
-        cudaMemcpyHostToDevice));
 
   HANDLE_ERROR(cudaDeviceSynchronize());
   HANDLE_ERROR(cudaPeekAtLastError());
@@ -374,5 +357,3 @@ void Solver<Problem, State, QState>::solve() {
 
   problem->expandSolution(statesHost, bestState);
 }
-
-

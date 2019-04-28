@@ -120,8 +120,9 @@ SlidingPuzzle::State SlidingPuzzle::getInitState() const {
 
 // TODO: This doesn't change across different problems
 SlidingPuzzle::QState SlidingPuzzle::getInitQState() const {
+  State initState = getInitState();
   return {
-    .f = 0,
+    .f = initState.f,
     .stateNumber = 0,
   };
 }

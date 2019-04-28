@@ -1,71 +1,111 @@
 #pragma once
 
-#define HEAP_SIZE 8 * 1024
+#include "errors.h"
+#include "memory.h"
 
-template<typename T>
-__device__ void swap(T* heap, int a, int b) {
-  T tmp = heap[a];
-  heap[a] = heap[b];
-  heap[b] = tmp;
-}
+template<int heapSize, int queuesCount, typename T>
+class Queues {
+ public:
+  void init(T initQState) {
+    HANDLE_ERROR(cudaMalloc(&queuesCuda, sizeof(T) * queuesCount * heapSize));
+    HANDLE_ERROR(cudaMalloc(&queueSizesCuda, sizeof(int) * queuesCount));
 
-template<typename T>
-__device__ void push(T* heap, int& heapSize, T st) {
-  assert(heapSize < HEAP_SIZE);
+    HANDLE_ERROR(cudaMemcpy(queuesCuda, &initQState, sizeof(T),
+                cudaMemcpyHostToDevice));
+    HANDLE_ERROR(cudaMemset(queueSizesCuda, 0, sizeof(int) * queuesCount));
 
-  heap[heapSize] = st;
-  int child = heapSize++;
-
-  while (child > 0 && heap[child].f < heap[(child - 1) / 2].f) {
-    swap(heap, child, (child - 1) / 2);
-    child = (child - 1) / 2;
+    int one = 1;
+    HANDLE_ERROR(cudaMemcpy(queueSizesCuda, &one, sizeof(int),
+          cudaMemcpyHostToDevice));
   }
-}
 
-template<typename T>
-__device__ T top(T* heap, int& heapSize) {
-  assert(heapSize > 0);
+  ~Queues() {
+    maybeCudaFree(queuesCuda);
+    maybeCudaFree(queueSizesCuda);
+  }
 
-  return heap[0];
-}
 
-template<typename T>
-__device__ T pop(T* heap, int& heapSize) {
-  assert(heapSize > 0);
+  __device__ void push(int queueNumber, T st) {
+    assert(queueNumber < queuesCount);
+    int& queueSize = queueSizesCuda[queueNumber];
+    assert(queueSize < heapSize);
 
-  T st = heap[0];
+    T* heap = queuesCuda + queueNumber * heapSize;
+    heap[queueSize] = st;
+    int child = queueSize++;
 
-  T last = heap[--heapSize];
-  heap[0] = last;
-
-  int k = 0;
-
-  while(2 * k + 1 < heapSize) {
-    int leftChild = 2 * k + 1;
-    int rightChild = 2 * k + 2;
-
-    if ((rightChild < heapSize && heap[leftChild].f < heap[rightChild].f)
-        || rightChild == heapSize) {
-      if (leftChild < heapSize && heap[leftChild].f < last.f) {
-        swap(heap, k, leftChild);
-        k = leftChild;
-      } else {
-        break;
-      }
-    } else {
-      if (rightChild < heapSize && heap[rightChild].f < last.f) {
-        swap(heap, k, rightChild);
-        k = rightChild;
-      } else {
-        break;
-      }
+    while (child > 0 && heap[child].f < heap[(child - 1) / 2].f) {
+      swap(heap, child, (child - 1) / 2);
+      child = (child - 1) / 2;
     }
   }
 
-  return st;
-}
+  __device__ T top(int queueNumber) {
+    assert(queueNumber < queuesCount);
+    int& queueSize = queueSizesCuda[queueNumber];
+    assert(queueSize > 0);
 
-__device__ bool empty(int heapSize) {
-  return heapSize == 0;
-}
+    T* heap = queuesCuda + queueNumber * heapSize;
+
+    return heap[0];
+  }
+
+  __device__ T pop(int queueNumber) {
+    assert(queueNumber < queuesCount);
+    int& queueSize = queueSizesCuda[queueNumber];
+    assert(queueSize > 0);
+
+    T* heap = queuesCuda + queueNumber * heapSize;
+    T st = heap[0];
+
+    T last = heap[--queueSize];
+    heap[0] = last;
+
+    int k = 0;
+
+    while(2 * k + 1 < queueSize) {
+      int leftChild = 2 * k + 1;
+      int rightChild = 2 * k + 2;
+
+      if ((rightChild < queueSize && heap[leftChild].f < heap[rightChild].f)
+          || rightChild == queueSize) {
+        if (leftChild < queueSize && heap[leftChild].f < last.f) {
+          swap(heap, k, leftChild);
+          k = leftChild;
+        } else {
+          break;
+        }
+      } else {
+        if (rightChild < queueSize && heap[rightChild].f < last.f) {
+          swap(heap, k, rightChild);
+          k = rightChild;
+        } else {
+          break;
+        }
+      }
+    }
+
+    return st;
+  }
+
+  __device__ bool empty(int queueNumber) {
+    assert(queueNumber < queuesCount);
+    return size(queueNumber) == 0;
+  }
+
+  __device__ int size(int queueNumber) {
+    return queueSizesCuda[queueNumber];
+  }
+
+ private:
+  T* queuesCuda = nullptr;
+  int* queueSizesCuda = nullptr;
+
+  __device__ void swap(T* heap, int a, int b) {
+    T tmp = heap[a];
+    heap[a] = heap[b];
+    heap[b] = tmp;
+  }
+};
+
 
