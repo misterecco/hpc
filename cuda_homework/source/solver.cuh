@@ -118,7 +118,6 @@ __device__ void Solver<Problem, State, QState>::extract(int& bestState,
     printf("statesSizeCuda: %d\n", *statesSizeCuda);
   }
 
-  // TODO: should I keep this loop? If so - adjust ALLOC_PACK
   int expandedStatesCount = min(Problem::kUnrollingRounds, queues.size(idx))
                             * Problem::kStatesUnrolledPerStep;
 
@@ -164,7 +163,6 @@ __device__ void Solver<Problem, State, QState>::extract(int& bestState,
 
   // printf("after dedup\n");
 
-  // TODO: think about better state distribution
   int targetBlock = (blockIdx.x + threadIdx.x) % kBlocks;
   for (int i = threadIdx.x; i < usbIdx; i += kThreadsPerBlock) {
     const int stNum = usedSlotsBlock[i];
