@@ -1,9 +1,7 @@
-CUDA_SOURCES := $(shell find . -name '*.cu')
-HEADERS := $(shell find . -name '*.h')
 CC := nvcc
-CCFLAGS := --gpu-architecture=compute_60 --gpu-code=sm_60 -rdc=true --compiler-options=-Wall -lineinfo -g
+CCFLAGS := --gpu-architecture=compute_60 --gpu-code=sm_60 -std=c++14 -rdc=true --compiler-options=-Wall -lineinfo -g
 
-all: astar_gpu heap_cpu
+all: astar_gpu
 
 pathfinding.o: pathfinding.cu pathfinding.cuh errors.h memory.h
 	$(CC) $(CCFLAGS) -c $@ $<
@@ -18,4 +16,4 @@ heap_cpu: heap_cpu.cpp
 	clang++ -o $@ $^ --std=c++11
 
 clean:
-	rm astar_gpu heap_cpu pathfinding.o slidingpuzzle.o
+	rm astar_gpu pathfinding.o slidingpuzzle.o
