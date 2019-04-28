@@ -111,10 +111,20 @@ class SlidingPuzzle {
   typedef slidingpuzzle::QState QState;
   typedef slidingpuzzle::State State;
 
+  static constexpr int kStatesUnrolledPerStep = 8;
+  static constexpr int kBlocks = 8;
+  static constexpr int kThreadsPerBlock = 128;
+  static constexpr int kQueueSize = 8 * 8192;
+  static constexpr int kTableSize = 96 * 1024 * 1024;
+  static constexpr int kHashTableSize = 32 * 1024 * 1024;
+  static constexpr int kUnrollingRounds = 1;
+  static constexpr int kStatesUnrolledPerRound =
+                       kStatesUnrolledPerStep * kUnrollingRounds;
+
   State getInitState() const;
   QState getInitQState() const;
   void printSolution(State* statesHost, int bestState, float execTime);
-  static const int statesUnrolledPerStep = 4;
+  static constexpr int statesUnrolledPerStep = 4;
 
   __device__ void expand(State* statesCuda, State& st, int stateIdx,
                          const Hashtable<State>& hashtable, int freeSlots[8],

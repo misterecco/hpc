@@ -58,9 +58,6 @@ Config parse_args(int argc, char** argv) {
 
 int main(int argc, char** argv) {
   Config config = parse_args(argc, argv);
-  /* printf("Config: version: %s, input_data: %s, output_data: %s\n", config.version ==
-      Version::SLIDING ? "sliding" : "pathfinding", config.input_data.c_str(),
-      config.output_data.c_str()); */
   if (config.version == Version::SLIDING) {
     Solver<SlidingPuzzle, SlidingPuzzle::State, SlidingPuzzle::QState>
       slidingPuzzleSolver(config);

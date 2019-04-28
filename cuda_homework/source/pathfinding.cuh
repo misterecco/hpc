@@ -67,7 +67,16 @@ class Pathfinding {
   typedef pathfinding::Coord Coord;
   typedef pathfinding::QState QState;
   typedef pathfinding::State State;
-  static const int statesUnrolledPerStep = 8;
+
+  static constexpr int kStatesUnrolledPerStep = 8;
+  static constexpr int kBlocks = 8;
+  static constexpr int kThreadsPerBlock = 128;
+  static constexpr int kQueueSize = 8 * 8192;
+  static constexpr int kTableSize = 96 * 1024 * 1024;
+  static constexpr int kHashTableSize = 32 * 1024 * 1024;
+  static constexpr int kUnrollingRounds = 1;
+  static constexpr int kStatesUnrolledPerRound =
+                       kStatesUnrolledPerStep * kUnrollingRounds;
 
   State getInitState();
   QState getInitQState();
