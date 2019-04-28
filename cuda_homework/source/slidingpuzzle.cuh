@@ -107,7 +107,7 @@ class SlidingPuzzle {
 
   State getInitState() const;
   QState getInitQState() const;
-  void expandSolution(State* statesHost, int bestState);
+  void printSolution(State* statesHost, int bestState);
   static const int statesUnrolledPerStep = 4;
 
   __device__ void expand(State* statesCuda, State& st, int stateIdx,

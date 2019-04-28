@@ -71,7 +71,7 @@ class Pathfinding {
 
   State getInitState();
   QState getInitQState();
-  void expandSolution(State* statesHost, int bestState);
+  void printSolution(State* statesHost, int bestState);
 
 __device__ void expand(State* statesCuda, State& st, int stateIdx,
                        const Hashtable<State>& hashtable, int freeSlots[8],

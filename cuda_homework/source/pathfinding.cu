@@ -142,7 +142,7 @@ Pathfinding::QState Pathfinding::getInitQState() {
   };
 }
 
-void Pathfinding::expandSolution(State* statesHost, int bestState) {
+void Pathfinding::printSolution(State* statesHost, int bestState) {
   State& st = statesHost[bestState];
   int initNode = getPosition(start.x, start.y);
 

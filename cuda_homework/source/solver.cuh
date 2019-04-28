@@ -320,6 +320,11 @@ __global__ void kernel(
 
 template<typename Problem, typename State, typename QState>
 void Solver<Problem, State, QState>::solve() {
+  cudaEvent_t start, stop;
+  cudaEventCreate(&start);
+  cudaEventCreate(&stop);
+  cudaEventRecord(start, 0);
+
   HANDLE_ERROR(cudaMalloc(&statesCuda, sizeof(State) * TABLE_SIZE));
   HANDLE_ERROR(cudaMalloc(&statesSizeCuda, sizeof(int)));
   HANDLE_ERROR(cudaMalloc(&finishedCuda, sizeof(int)));
@@ -381,10 +386,16 @@ void Solver<Problem, State, QState>::solve() {
 
   printf("bestState: %d\n", bestState);
 
+  cudaEventRecord(stop);
+  cudaEventSynchronize(stop);
+  float elapsedTime;
+  cudaEventElapsedTime(&elapsedTime, start, stop);
+  printf("Execution time: %.0f\n", elapsedTime);
+
   if (bestState == -1) {
     printf("Unreachable\n");
     return;
   }
 
-  problem->expandSolution(statesHost, bestState);
+  problem->printSolution(statesHost, bestState);
 }

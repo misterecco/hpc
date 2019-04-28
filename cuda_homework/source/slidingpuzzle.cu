@@ -138,7 +138,7 @@ SlidingPuzzle::QState SlidingPuzzle::getInitQState() const {
   };
 }
 
-void SlidingPuzzle::expandSolution(State* statesHost, int bestState) {
+void SlidingPuzzle::printSolution(State* statesHost, int bestState) {
   State& st = statesHost[bestState];
 
   printf("path:\n");
