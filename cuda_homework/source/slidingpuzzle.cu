@@ -139,10 +139,10 @@ SlidingPuzzle::QState SlidingPuzzle::getInitQState() const {
   };
 }
 
-void SlidingPuzzle::printSolution(State* statesHost, int bestState) {
+void SlidingPuzzle::printSolution(State* statesHost, int bestState, float execTime) {
+  FILE* output = fopen(config.output_data.c_str(), "w");
   State& st = statesHost[bestState];
 
-  // TODO: write to file
   std::vector<PuzzleConfig> path;
   while(st.node != startNode) {
     path.push_back(st.node);
@@ -151,8 +151,9 @@ void SlidingPuzzle::printSolution(State* statesHost, int bestState) {
   path.push_back(st.node);
   std::reverse(path.begin(), path.end());
 
+  fprintf(output, "%.0f\n", execTime);
+
   for (PuzzleConfig& node : path) {
-    node.print();
-    printf("\n");
+    node.print(output);
   }
 }

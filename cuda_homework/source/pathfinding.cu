@@ -144,11 +144,11 @@ Pathfinding::QState Pathfinding::getInitQState() {
   };
 }
 
-void Pathfinding::printSolution(State* statesHost, int bestState) {
+void Pathfinding::printSolution(State* statesHost, int bestState, float execTime) {
+  FILE* output = fopen(config.output_data.c_str(), "w");
   State& st = statesHost[bestState];
   int initNode = getPosition(start.x, start.y);
 
-  // TODO: write to file
   std::vector<int> path;
   while(st.node != initNode) {
     path.push_back(st.node);
@@ -157,7 +157,9 @@ void Pathfinding::printSolution(State* statesHost, int bestState) {
   path.push_back(st.node);
   std::reverse(path.begin(), path.end());
 
+  fprintf(output, "%.0f\n", execTime);
+
   for (int node : path) {
-    printf("%d,%d\n", node % n, node / n);
+    fprintf(output, "%d,%d\n", node % n, node / n);
   }
 }

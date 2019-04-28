@@ -363,8 +363,6 @@ void Solver<Problem, State, QState>::solve() {
   HANDLE_ERROR(cudaPeekAtLastError());
   printf("Memory transfers complete!\n");
 
-  // TODO: add timing
-
   void* kernelArgs[] = {(void*) this, (void*) problem};
   HANDLE_ERROR(cudaLaunchCooperativeKernel(
     (void*) kernel<Problem, State, QState>, BLOCKS,
@@ -397,5 +395,5 @@ void Solver<Problem, State, QState>::solve() {
     return;
   }
 
-  problem->printSolution(statesHost, bestState);
+  problem->printSolution(statesHost, bestState, elapsedTime);
 }

@@ -30,6 +30,12 @@ struct PuzzleConfig {
     return !(*this == other);
   };
 
+  void print(FILE* file) const {
+    for (int i = 0; i < 25; i++) {
+      fprintf(file, i == 24 ? "%d\n" : "%d,", board[i]);
+    }
+  }
+
   __device__ __host__ void print() const {
     for (int i = 0; i < 25; i++) {
       printf(i == 24 ? "%d" : "%d,", board[i]);
@@ -107,7 +113,7 @@ class SlidingPuzzle {
 
   State getInitState() const;
   QState getInitQState() const;
-  void printSolution(State* statesHost, int bestState);
+  void printSolution(State* statesHost, int bestState, float execTime);
   static const int statesUnrolledPerStep = 4;
 
   __device__ void expand(State* statesCuda, State& st, int stateIdx,
