@@ -93,6 +93,7 @@ SlidingPuzzle::SlidingPuzzle (const Config& config) : config(config) {
           continue;
         }
 
+        // printf("g: %d ", statesCuda[idx].g);
         // statesCuda[idx].print(0);
 
         if (newNode == endNodeCuda && (bestState == -1 ||

@@ -3,9 +3,12 @@
 #include "errors.h"
 #include "memory.h"
 
-template<int heapSize, int queuesCount, typename T>
+template<typename T>
 class Queues {
  public:
+  Queues(int heapSize, int queuesCount)
+    : heapSize(heapSize), queuesCount(queuesCount) { }
+
   void init(T initQState) {
     HANDLE_ERROR(cudaMalloc(&queuesCuda, sizeof(T) * queuesCount * heapSize));
     HANDLE_ERROR(cudaMalloc(&queueSizesCuda, sizeof(int) * queuesCount));
@@ -100,6 +103,8 @@ class Queues {
  private:
   T* queuesCuda = nullptr;
   int* queueSizesCuda = nullptr;
+  int heapSize;
+  int queuesCount;
 
   __device__ void swap(T* heap, int a, int b) {
     T tmp = heap[a];

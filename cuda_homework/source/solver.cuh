@@ -15,10 +15,10 @@
 
 using namespace cooperative_groups;
 
-#define BLOCKS 4
-#define THREADS_PER_BLOCK 4
-#define TABLE_SIZE (64 * 1024 * 1024)
-#define HASH_TABLE_SIZE (64 * 1024 * 1024)
+#define BLOCKS 8
+#define THREADS_PER_BLOCK 128
+#define TABLE_SIZE (96 * 1024 * 1024)
+#define HASH_TABLE_SIZE (32 * 1024 * 1024)
 #define UNROLLING_ROUNDS 1
 #define ALLOC_PACK 8
 
@@ -32,7 +32,7 @@ class Solver {
 
   Problem* problem;
   Lock lockCuda;
-  Queues<8 * 8192, BLOCKS * THREADS_PER_BLOCK, QState> queues;
+  Queues<QState> queues;
   Hashtable<State> hashtable;
 
   State* statesHost = nullptr;
@@ -51,7 +51,9 @@ class Solver {
 
 template<typename Problem, typename State, typename QState>
 Solver<Problem, State, QState>::Solver(const Config& config)
- : problem(new Problem(config)), hashtable(HASH_TABLE_SIZE) { }
+ : problem(new Problem(config)),
+   hashtable(HASH_TABLE_SIZE),
+   queues(8 * 8192, BLOCKS * THREADS_PER_BLOCK) { }
 
 template<typename Problem, typename State, typename QState>
 Solver<Problem, State, QState>::~Solver() {
@@ -104,10 +106,14 @@ __device__ void Solver<Problem, State, QState>::extract(int& bestState,
 
   if (requestCount > 0) {
     int firstFreeSlot = atomicAdd(statesSizeCuda, requestCount);
+    assert(firstFreeSlot < TABLE_SIZE);
 
     for (int i = 0; i < requestCount; i++) {
       freeSlots[i] = firstFreeSlot + i;
     }
+  }
+  if (idx == 0) {
+    printf("statesSizeCuda: %d\n", *statesSizeCuda);
   }
 
   // TODO: should I keep this loop? If so - adjust ALLOC_PACK
@@ -240,7 +246,7 @@ __device__ void Solver<Problem, State, QState>::findSolution() {
         statesCuda[*bestStateCuda].print(problem->n);
       }
 
-      if (queues.empty(gti) || queues.top(gti).f > statesCuda[*bestStateCuda].f) {
+      if (queues.empty(gti) || queues.top(gti).f >= statesCuda[*bestStateCuda].f) {
         endCondition[ti] = 1;
       }
 
@@ -291,7 +297,7 @@ __device__ void Solver<Problem, State, QState>::findSolution() {
         printf("i: %d, queueSize: %d\n", i, queues.size(i));
         if (queues.size(i) > 0) {
           finished = 0;
-          // break;
+          break;
         }
       }
       if (finished) {
