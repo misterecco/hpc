@@ -33,7 +33,6 @@ class Solver {
   State* statesHost = nullptr;
   State* statesCuda = nullptr;
   int* statesSizeCuda = nullptr;
-  int* hashtableCuda = nullptr;
   int* finishedCuda = nullptr;
   int* bestStateCuda = nullptr;
   int* bestBlockStatesCuda = nullptr;
@@ -41,6 +40,7 @@ class Solver {
   int bestState = -1;
   Lock lockCuda;
   Queues<8 * 8192, BLOCKS * THREADS_PER_BLOCK, QState> queues;
+  Hashtable<HASH_TABLE_SIZE, State> hashtable;
 
   __device__ void lock();
   __device__ void unlock();
@@ -57,7 +57,6 @@ Solver<Problem, State, QState>::~Solver() {
   maybeFree(statesHost);
   maybeCudaFree(statesCuda);
   maybeCudaFree(statesSizeCuda);
-  maybeCudaFree(hashtableCuda);
   maybeCudaFree(finishedCuda);
   maybeCudaFree(bestStateCuda);
   maybeCudaFree(bestBlockStatesCuda);
@@ -125,7 +124,7 @@ __device__ void Solver<Problem, State, QState>::extract(int& bestState) {
   }
 
   for (int i = 0; i < expandedStatesCount; i++) {
-    deduplicate(statesCuda, hashtableCuda, offsets[threadIdx.x] + i, HASH_TABLE_SIZE);
+    hashtable.deduplicate(statesCuda, offsets[threadIdx.x] + i);
   }
 
   lock();
@@ -282,7 +281,6 @@ __global__ void kernel(
 template<typename Problem, typename State, typename QState>
 void Solver<Problem, State, QState>::solve() {
   HANDLE_ERROR(cudaMalloc(&statesCuda, sizeof(State) * TABLE_SIZE));
-  HANDLE_ERROR(cudaMalloc(&hashtableCuda, sizeof(int) * HASH_TABLE_SIZE));
   HANDLE_ERROR(cudaMalloc(&statesSizeCuda, sizeof(int)));
   HANDLE_ERROR(cudaMalloc(&finishedCuda, sizeof(int)));
   HANDLE_ERROR(cudaMalloc(&bestStateCuda, sizeof(int)));
@@ -295,14 +293,6 @@ void Solver<Problem, State, QState>::solve() {
 
   statesHost = (State*) HANDLE_NULLPTR(malloc(sizeof(State) * TABLE_SIZE));
 
-  int* hashtableHost = (int*) HANDLE_NULLPTR(malloc(sizeof(int) * HASH_TABLE_SIZE));
-  for (int i = 0; i < HASH_TABLE_SIZE; i++) {
-    hashtableHost[i] = -1;
-  }
-  HANDLE_ERROR(cudaMemcpy(hashtableCuda, hashtableHost, sizeof(int) * HASH_TABLE_SIZE,
-        cudaMemcpyHostToDevice));
-  free(hashtableHost);
-
   for (int i = 0; i < TABLE_SIZE; i++) {
     statesHost[i] = State();
   }
@@ -311,6 +301,7 @@ void Solver<Problem, State, QState>::solve() {
   QState initQState = problem->getInitQState();
 
   queues.init(initQState);
+  hashtable.init();
 
   statesHost[0] = initState;
 
