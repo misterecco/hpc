@@ -9,9 +9,9 @@
 #include "config.h"
 #include "errors.h"
 #include "hashtable.cuh"
-#include "heap.cuh"
 #include "lock.cuh"
 #include "memory.h"
+#include "queues.cuh"
 
 using namespace cooperative_groups;
 

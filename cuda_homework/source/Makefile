@@ -11,7 +11,7 @@ pathfinding.o: pathfinding.cu pathfinding.cuh errors.h memory.h
 slidingpuzzle.o: slidingpuzzle.cu slidingpuzzle.cuh errors.h
 	$(CC) $(CCFLAGS) -c $@ $<
 
-astar_gpu: astar_gpu.cu pathfinding.o slidingpuzzle.o solver.cuh hashtable.cuh heap.cuh memory.h
+astar_gpu: astar_gpu.cu pathfinding.o slidingpuzzle.o solver.cuh hashtable.cuh queues.cuh memory.h
 	$(CC) $(CCFLAGS) -o $@ $< pathfinding.o slidingpuzzle.o
 
 heap_cpu: heap_cpu.cpp
