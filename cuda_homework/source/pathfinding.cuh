@@ -28,8 +28,6 @@ struct State {
 
   __device__ unsigned int hash(unsigned long long a, int tableSize) const {
     unsigned int result = (a * node) % tableSize;
-    // result = ((result + f) * a) % TABLE_SIZE;
-    // result = ((result + g) * a) % TABLE_SIZE;
     return result;
   }
 

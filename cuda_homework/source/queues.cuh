@@ -29,7 +29,6 @@ class Queues {
 
 
   __device__ void push(int queueNumber, T st) {
-    assert(queueNumber < queuesCount);
     int& queueSize = queueSizesCuda[queueNumber];
     assert(queueSize < heapSize);
 
@@ -44,19 +43,13 @@ class Queues {
   }
 
   __device__ T top(int queueNumber) {
-    assert(queueNumber < queuesCount);
-    int& queueSize = queueSizesCuda[queueNumber];
-    assert(queueSize > 0);
-
     T* heap = queuesCuda + queueNumber * heapSize;
 
     return heap[0];
   }
 
   __device__ T pop(int queueNumber) {
-    assert(queueNumber < queuesCount);
     int& queueSize = queueSizesCuda[queueNumber];
-    assert(queueSize > 0);
 
     T* heap = queuesCuda + queueNumber * heapSize;
     T st = heap[0];
@@ -92,7 +85,6 @@ class Queues {
   }
 
   __device__ bool empty(int queueNumber) {
-    assert(queueNumber < queuesCount);
     return size(queueNumber) == 0;
   }
 
