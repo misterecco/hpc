@@ -70,8 +70,6 @@ __device__ void Pathfinding::expand(State* statesCuda, State& st, int stateIdx,
     return;
   }
 
-  // st.print(n);
-
   int x = st.node % n;
   int y = st.node / n;
 
@@ -99,7 +97,6 @@ __device__ void Pathfinding::expand(State* statesCuda, State& st, int stateIdx,
 
         if (newNode == endNodeCuda && (bestState == -1 ||
               statesCuda[bestState].f > statesCuda[idx].f)) {
-          printf("Updating my bestState to: %d\n", idx);
           bestState = idx;
         }
 
@@ -143,6 +140,13 @@ Pathfinding::QState Pathfinding::getInitQState() {
 
 void Pathfinding::printSolution(State* statesHost, int bestState, float execTime) {
   FILE* output = fopen(config.output_data.c_str(), "w");
+
+  fprintf(output, "%.0f\n", execTime);
+
+  if (bestState == -1) {
+    return;
+  }
+
   State& st = statesHost[bestState];
   int initNode = getPosition(start.x, start.y);
 
@@ -153,8 +157,6 @@ void Pathfinding::printSolution(State* statesHost, int bestState, float execTime
   }
   path.push_back(st.node);
   std::reverse(path.begin(), path.end());
-
-  fprintf(output, "%.0f\n", execTime);
 
   for (int node : path) {
     fprintf(output, "%d,%d\n", node % n, node / n);

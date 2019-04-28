@@ -114,9 +114,6 @@ __device__ void Solver<Problem, State, QState>::extract(int& bestState,
       freeSlots[i] = firstFreeSlot + i;
     }
   }
-  if (idx == 0) {
-    printf("statesSizeCuda: %d\n", *statesSizeCuda);
-  }
 
   int expandedStatesCount = min(Problem::kUnrollingRounds, queues.size(idx))
                             * Problem::kStatesUnrolledPerStep;
@@ -213,11 +210,6 @@ __device__ void Solver<Problem, State, QState>::findSolution() {
     grid.sync();
 
     if (*bestStateCuda != -1) {
-      if (ti == 0 && bi == 0) {
-        printf("Best state: ");
-        statesCuda[*bestStateCuda].print(problem->n);
-      }
-
       if (queues.empty(gti) || queues.top(gti).f >= statesCuda[*bestStateCuda].f) {
         endCondition[ti] = 1;
       }
@@ -258,7 +250,6 @@ __device__ void Solver<Problem, State, QState>::findSolution() {
     if (ti == 0 && bi == 0) {
       int finished = 1;
       for (int i = 0; i < kBlocks * kThreadsPerBlock; i++) {
-        printf("i: %d, queueSize: %d\n", i, queues.size(i));
         if (queues.size(i) > 0) {
           finished = 0;
           break;
@@ -352,7 +343,6 @@ void Solver<Problem, State, QState>::solve() {
 
   if (bestState == -1) {
     printf("Unreachable\n");
-    return;
   }
 
   problem->printSolution(statesHost, bestState, elapsedTime);

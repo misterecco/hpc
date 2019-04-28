@@ -42,11 +42,6 @@ SlidingPuzzle::SlidingPuzzle (const Config& config) : config(config) {
       numberToPosition[num] = i;
   }
 
-  for (int i = 0; i < 25; i++) {
-    printf("%d ", numberToPosition[i]);
-  }
-  printf("\n");
-
   HANDLE_ERROR(cudaMemcpyToSymbol(numberToPositionCuda, numberToPosition, sizeof(int) * 25));
   HANDLE_ERROR(cudaMemcpyToSymbol(endNodeCuda, &endNode, sizeof(PuzzleConfig)));
   HANDLE_ERROR(cudaDeviceSynchronize());
@@ -95,7 +90,6 @@ SlidingPuzzle::SlidingPuzzle (const Config& config) : config(config) {
 
         if (newNode == endNodeCuda && (bestState == -1 ||
             statesCuda[bestState].f > statesCuda[idx].f)) {
-          printf("Updating my bestState to: %d\n", idx);
           bestState = idx;
         }
 
@@ -138,6 +132,12 @@ void SlidingPuzzle::printSolution(State* statesHost, int bestState, float execTi
   FILE* output = fopen(config.output_data.c_str(), "w");
   State& st = statesHost[bestState];
 
+  fprintf(output, "%.0f\n", execTime);
+
+  if (bestState == -1) {
+    return;
+  }
+
   std::vector<PuzzleConfig> path;
   while(st.node != startNode) {
     path.push_back(st.node);
@@ -146,7 +146,6 @@ void SlidingPuzzle::printSolution(State* statesHost, int bestState, float execTi
   path.push_back(st.node);
   std::reverse(path.begin(), path.end());
 
-  fprintf(output, "%.0f\n", execTime);
 
   for (PuzzleConfig& node : path) {
     node.print(output);
