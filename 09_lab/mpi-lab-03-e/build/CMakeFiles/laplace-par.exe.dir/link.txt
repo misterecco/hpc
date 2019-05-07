@@ -1,0 +1,1 @@
+mpicxx     CMakeFiles/laplace-par.exe.dir/laplace-common.cpp.o CMakeFiles/laplace-par.exe.dir/laplace-par.cpp.o  -o laplace-par.exe 

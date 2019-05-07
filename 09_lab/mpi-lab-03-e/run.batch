@@ -1,0 +1,15 @@
+#!/bin/bash -l
+#SBATCH --job-name laplace-par       # this will be shown in the queueing system
+#SBATCH --output "out/%j.out"        # stdout redirection
+#SBATCH --error "out/%j.err"         # stderr redirection
+#SBATCH --account "GC72-18"          # the number of our grant
+#SBATCH --nodes 2                    # how many nodes we want
+#SBATCH --tasks-per-node 4           # each node is 2 socket, 12 core, so we want 24 tasks on each node
+#SBATCH --time 00:05:00              # if the job runs longer than this, it'll be killed
+
+# for size in 100 1000
+# do
+#  srun floyd-warshall-par.exe $size
+# done
+
+srun build/laplace-par.exe 10
