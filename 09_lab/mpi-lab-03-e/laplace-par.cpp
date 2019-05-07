@@ -78,6 +78,11 @@ static std::tuple<int, double> performAlgorithm(int myRank, int numProcesses, Gr
     int nextRank = myRank + 1;
     int numRows = frag->lastRowIdxExcl - frag->firstRowIdxIncl + 2;
 
+    double* maxDiffs;
+    if (myRank == 0) {
+        maxDiffs = (double*) malloc(sizeof(double) * numProcesses);
+    }
+
     /* TODO: change the following code fragment */
     /* Implement asynchronous communication of neighboring elements */
     /* and computation of the grid */
@@ -119,12 +124,7 @@ static std::tuple<int, double> performAlgorithm(int myRank, int numProcesses, Gr
             }
         }
 
-        double* maxDiffs;
-        if (myRank == 0) {
-            maxDiffs = (double*) malloc(sizeof(int) * numProcesses);
-        }
-
-        MPI_Gather(&maxDiff, 1, MPI_DOUBLE, maxDiffs, numProcesses, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+        MPI_Gather(&maxDiff, 1, MPI_DOUBLE, maxDiffs, 1, MPI_DOUBLE, 0, MPI_COMM_WORLD);
 
         if (myRank == 0) {
             for (int i = 0; i < numProcesses; i++) {
@@ -140,6 +140,10 @@ static std::tuple<int, double> performAlgorithm(int myRank, int numProcesses, Gr
 
         ++numIterations;
     } while (maxDiff > epsilon);
+
+    if (myRank == 0) {
+        free(maxDiffs);
+    }
 
     /* no code changes beyond this point should be needed */
 
