@@ -3,3 +3,4 @@ Distributed - 32 threads
 
 sequential: 24s
 distributed v1: 5.7s
+distributed v2: 4.6s

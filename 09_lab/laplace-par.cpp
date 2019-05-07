@@ -78,6 +78,7 @@ static std::tuple<int, double> performAlgorithm(int myRank, int numProcesses, Gr
     int nextRank = myRank + 1;
     int numRows = frag->lastRowIdxExcl - frag->firstRowIdxIncl + 2;
     double allMaxDiff = 0;
+    MPI_Request request;
 
     /* TODO: change the following code fragment */
     /* Implement asynchronous communication of neighboring elements */
@@ -105,18 +106,20 @@ static std::tuple<int, double> performAlgorithm(int myRank, int numProcesses, Gr
                     }
                 }
             }
-        }
 
-        for (int color = 0; color < 2; ++color) {
             if (prevRank >= 0) {
-                MPI_Recv(frag->data[color][0], frag->gridDimension / 2, MPI_DOUBLE, prevRank, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+                MPI_Irecv(frag->data[color][0], frag->gridDimension / 2, MPI_DOUBLE, prevRank, 0,
+                  MPI_COMM_WORLD, &request);
             }
             if (nextRank < numProcesses) {
-                MPI_Send(frag->data[color][numRows-2], frag->gridDimension / 2, MPI_DOUBLE, nextRank, 0, MPI_COMM_WORLD);
-                MPI_Recv(frag->data[color][numRows-1], frag->gridDimension / 2, MPI_DOUBLE, nextRank, 1, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+                MPI_Isend(frag->data[color][numRows-2], frag->gridDimension / 2, MPI_DOUBLE, nextRank, 0,
+                  MPI_COMM_WORLD, &request);
+                MPI_Irecv(frag->data[color][numRows-1], frag->gridDimension / 2, MPI_DOUBLE, nextRank, 1,
+                  MPI_COMM_WORLD, &request);
             }
             if (prevRank >= 0) {
-                MPI_Send(frag->data[color][1], frag->gridDimension / 2, MPI_DOUBLE, prevRank, 1, MPI_COMM_WORLD);
+                MPI_Isend(frag->data[color][1], frag->gridDimension / 2, MPI_DOUBLE, prevRank, 1,
+                  MPI_COMM_WORLD, &request);
             }
         }
 
