@@ -77,7 +77,11 @@ static std::tuple<int, double> performAlgorithm(int myRank, int numProcesses, Gr
     int prevRank = myRank - 1;
     int nextRank = myRank + 1;
     int numRows = frag->lastRowIdxExcl - frag->firstRowIdxIncl + 2;
-    double allMaxDiff = 0;
+
+    double* maxDiffs;
+    if (myRank == 0) {
+        maxDiffs = (double*) malloc(sizeof(double) * numProcesses);
+    }
 
     /* TODO: change the following code fragment */
     /* Implement asynchronous communication of neighboring elements */
@@ -120,10 +124,26 @@ static std::tuple<int, double> performAlgorithm(int myRank, int numProcesses, Gr
             }
         }
 
-        MPI_Allreduce(&maxDiff, &allMaxDiff, 1, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD);
+        MPI_Gather(&maxDiff, 1, MPI_DOUBLE, maxDiffs, 1, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+
+        if (myRank == 0) {
+            for (int i = 0; i < numProcesses; i++) {
+              maxDiff = std::max(maxDiff, maxDiffs[i]);
+            }
+            for (int i = 0; i < numProcesses; i++) {
+              maxDiffs[i] = maxDiff;
+            }
+            // printf("maxDiff: %f, numIterations: %d\n", maxDiff, numIterations);
+        }
+
+        MPI_Scatter(maxDiffs, 1, MPI_DOUBLE, &maxDiff, 1, MPI_DOUBLE, 0, MPI_COMM_WORLD);
 
         ++numIterations;
-    } while (allMaxDiff > epsilon);
+    } while (maxDiff > epsilon);
+
+    if (myRank == 0) {
+        free(maxDiffs);
+    }
 
     /* no code changes beyond this point should be needed */
 

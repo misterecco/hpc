@@ -1,0 +1,5 @@
+Results for n = 1000
+Distributed - 32 threads
+
+sequential: 24s
+distributed v1: 5.7s
