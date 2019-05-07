@@ -1,1 +1,0 @@
-mpicxx     CMakeFiles/scatter-gather-max.exe.dir/scatter-gather-max.cpp.o  -o scatter-gather-max.exe 

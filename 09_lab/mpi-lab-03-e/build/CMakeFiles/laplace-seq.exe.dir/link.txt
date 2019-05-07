@@ -1,1 +1,0 @@
-mpicxx     CMakeFiles/laplace-seq.exe.dir/laplace-common.cpp.o CMakeFiles/laplace-seq.exe.dir/laplace-seq.cpp.o  -o laplace-seq.exe 

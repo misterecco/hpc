@@ -1,1 +1,0 @@
-mpicxx     CMakeFiles/ring-nonblocking.exe.dir/ring-nonblocking.cpp.o  -o ring-nonblocking.exe 

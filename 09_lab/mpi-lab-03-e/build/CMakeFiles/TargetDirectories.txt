@@ -1,6 +1,0 @@
-/home/tomek/uw-workspace/hpc/09_lab/mpi-lab-03-e/build/CMakeFiles/rebuild_cache.dir
-/home/tomek/uw-workspace/hpc/09_lab/mpi-lab-03-e/build/CMakeFiles/scatter-gather-max.exe.dir
-/home/tomek/uw-workspace/hpc/09_lab/mpi-lab-03-e/build/CMakeFiles/edit_cache.dir
-/home/tomek/uw-workspace/hpc/09_lab/mpi-lab-03-e/build/CMakeFiles/ring-nonblocking.exe.dir
-/home/tomek/uw-workspace/hpc/09_lab/mpi-lab-03-e/build/CMakeFiles/laplace-seq.exe.dir
-/home/tomek/uw-workspace/hpc/09_lab/mpi-lab-03-e/build/CMakeFiles/laplace-par.exe.dir
