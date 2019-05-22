@@ -22,9 +22,24 @@ if (ENABLE_SANITIZERS)
 endif()
 
 
+
+# FIND DEPENDENCIES
+
+set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/")
+
+find_package(MKL REQUIRED)
+include_directories(${MKL_INCLUDE_DIRS})
+link_directories(${MKL_LIBRARIES})
+
+
+
+# DEFINE PROJECT FILES
+
 set(SOURCE_FILES ${SOURCE_FILES} errors.h matrixmul.cpp)
 
 add_library(densematgen densematgen.cpp densematgen.h)
+add_library(matrix matrix.cpp matrix.h)
 
 add_executable(matrixmul matrixmul.cpp)
-target_link_libraries(matrixmul densematgen)
+target_link_libraries(matrixmul densematgen matrix)
+target_link_libraries(matrixmul mkl_intel_lp64 mkl_sequential mkl_core)
