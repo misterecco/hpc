@@ -7,6 +7,7 @@
 using std::cout;
 using std::endl;
 using std::ifstream;
+using std::min;
 using std::string;
 using std::vector;
 
@@ -93,8 +94,8 @@ void SparseMatrix::addPadding(int numProcesses) {
   compact();
 }
 
-vector<ProblemInfo> SparseMatrix::getColumnDistributionInfo(int numProcesses) const {
-  vector<ProblemInfo> dist;
+vector<SparseMatrixInfo> SparseMatrix::getColumnDistributionInfo(int numProcesses) const {
+  vector<SparseMatrixInfo> dist;
 
   int colsPerProcess = cols / numProcesses;
   vector<int> nnzs(numProcesses);
@@ -108,6 +109,7 @@ vector<ProblemInfo> SparseMatrix::getColumnDistributionInfo(int numProcesses) co
       .rows = rows,
       .cols = cols,
       .nnz = nnzs[i],
+      .d = min(nnzs[i], colsPerProcess),
     });
   }
 
@@ -136,6 +138,7 @@ vector<SparseMatrix> SparseMatrix::getColumnDistribution(int numProcesses) const
     for (int i = firstInd; i < lastInd; i++) {
       int colIdx = col_indx[i];
       int p = colIdx / colsPerProcess;
+      // TODO: should the colIdx be adjusted here? Probably not
 
       auto& frag = dist[p];
       frag.values.push_back(values[i]);
@@ -150,7 +153,7 @@ vector<SparseMatrix> SparseMatrix::getColumnDistribution(int numProcesses) const
 
   for (auto& frag : dist) {
     frag.nnz = frag.values.size();
-    frag.d = std::min(frag.nnz, colsPerProcess);
+    frag.d = min(frag.nnz, colsPerProcess);
     frag.compact();
   }
 
@@ -162,4 +165,18 @@ void SparseMatrix::compact() {
   rows_end.shrink_to_fit();
   col_indx.shrink_to_fit();
   values.shrink_to_fit();
+}
+
+void SparseMatrix::reserveSpace(SparseMatrixInfo& matrixInfo) {
+  rows = matrixInfo.rows;
+  cols = matrixInfo.cols;
+  nnz = matrixInfo.nnz;
+  d = matrixInfo.d;
+
+  rows_start.resize(rows);
+  rows_end.resize(rows);
+  col_indx.resize(nnz);
+  values.resize(nnz);
+
+  compact();
 }

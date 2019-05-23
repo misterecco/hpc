@@ -3,13 +3,16 @@
 #include <mkl.h>
 #include <vector>
 
-struct ProblemInfo {
+struct SparseMatrixInfo {
   int rows;
   int cols;
   int nnz;
+  int d;
+
+  static constexpr int size = 4;
 
   void print() const {
-    printf("rows: %d cols: %d nnz: %d\n", rows, cols, nnz);
+    printf("rows: %d cols: %d nnz: %d d: %d\n", rows, cols, nnz, d);
   }
 };
 
@@ -31,8 +34,9 @@ struct SparseMatrix {
 
   void addPadding(int numProcesses);
   void compact();
+  void reserveSpace(SparseMatrixInfo& matrixInfo);
 
-  std::vector<ProblemInfo> getColumnDistributionInfo(int numProcesses) const;
+  std::vector<SparseMatrixInfo> getColumnDistributionInfo(int numProcesses) const;
   std::vector<SparseMatrix> getColumnDistribution(int numProcesses) const;
 
   void print() const;
