@@ -19,8 +19,23 @@ int main(int argc, char** argv) {
 
   config.print();
 
+  int numProcesses = 3;
 
   SparseMatrix A(config.sparse_matrix_file);
+
+  int n = A.rows;
+  A.addPadding(numProcesses);
+
+  auto info = A.getColumnDistributionInfo(numProcesses);
+
+  auto dist = A.getColumnDistribution(numProcesses);
+
+  for (auto d : dist) {
+    d.print();
+    std::cout << "============================" << std::endl;
+  }
+
+  A.print();
 
   // sparse_matrix_t mat;
 

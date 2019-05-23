@@ -1,30 +1,45 @@
 #pragma once
 
 #include <mkl.h>
+#include <vector>
+
+struct ProblemInfo {
+  int rows;
+  int cols;
+  int nnz;
+
+  void print() const {
+    printf("rows: %d cols: %d nnz: %d\n", rows, cols, nnz);
+  }
+};
 
 struct SparseMatrix {
   int rows = 0;
   int cols = 0;
   int nnz = 0;
   int d = 0;
-  int *rows_start = nullptr;
-  int *rows_end = nullptr;
-  int *col_indx = nullptr;
-  double *values = nullptr;
+
+  std::vector<int> rows_start;
+  std::vector<int> rows_end;
+  std::vector<int> col_indx;
+  std::vector<double> values;
 
   SparseMatrix() = default;
   SparseMatrix(std::string filePath);
 
-  ~SparseMatrix();
-
-  // not const because there is no const version
-  // of mkl_sparse_d_create_csr
   sparse_matrix_t toMklSparse();
+
+  void addPadding(int numProcesses);
+  void compact();
+
+  std::vector<ProblemInfo> getColumnDistributionInfo(int numProcesses) const;
+  std::vector<SparseMatrix> getColumnDistribution(int numProcesses) const;
+
   void print() const;
 };
 
 struct DenseMatrix {
   int rows;
   int cols;
-  double *values;
+  std::vector<double> values;
 };
