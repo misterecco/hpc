@@ -8,11 +8,15 @@ struct SparseMatrixInfo {
   int cols;
   int nnz;
   int d;
+  int actualRows;
+  int rank;
 
-  static constexpr int size = 4;
+  // IMPORTANT: keep in sync with actual fields count
+  static constexpr int size = 6;
 
   void print() const {
-    printf("rows: %d cols: %d nnz: %d d: %d\n", rows, cols, nnz, d);
+    printf("rows: %d cols: %d actualRows: %d nnz: %d d: %d rank: %d\n",
+      rows, cols, actualRows, nnz, d, rank);
   }
 };
 
@@ -20,7 +24,9 @@ struct SparseMatrix {
   int rows = 0;
   int cols = 0;
   int nnz = 0;
-  int d = 0;
+  int d = 0; // TODO: get rid of it?
+  int actualRows = 0;
+  int rank = 0;
 
   std::vector<int> rows_start;
   std::vector<int> rows_end;
@@ -45,5 +51,13 @@ struct SparseMatrix {
 struct DenseMatrix {
   int rows;
   int cols;
+  int rank;
+
   std::vector<double> values;
+
+  DenseMatrix() = default;
+  DenseMatrix(SparseMatrixInfo& matrixInfo, int rank, int numProcesses, int seed);
+
+  void compact();
+  void print() const;
 };

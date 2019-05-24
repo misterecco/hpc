@@ -29,14 +29,16 @@ int main(int argc, char** argv) {
 
   SparseMatrixInfo myAInfo;
   SparseMatrix myA;
+  DenseMatrix myB;
 
+  // INITIAL DISTRIBUTION
   if (myRank == 0) {
     config.print();
 
     SparseMatrix A(config.sparse_matrix_file);
-    int n = A.rows;
-
     A.addPadding(numProcesses);
+
+    // TODO: row distibution for InnerABC
     auto info = A.getColumnDistributionInfo(numProcesses);
 
     {
@@ -48,6 +50,7 @@ int main(int argc, char** argv) {
       myA.reserveSpace(myAInfo);
     }
 
+    // TODO: row distibution for InnerABC
     auto frags = A.getColumnDistribution(numProcesses);
 
     {
@@ -103,9 +106,12 @@ int main(int argc, char** argv) {
       }
     }
 
+    myB = DenseMatrix(myAInfo, myRank, numProcesses, config.seed);
+    // myB.print();
+
     MPI_Barrier(MPI_COMM_WORLD);
 
-    myA.print();
+    // myA.print();
 
   } else {
     {
@@ -142,9 +148,12 @@ int main(int argc, char** argv) {
         myA.values.data(), myAInfo.nnz, MPI_DOUBLE, 0, MPI_COMM_WORLD, &request);
     }
 
+    myB = DenseMatrix(myAInfo, myRank, numProcesses, config.seed);
+    // myB.print();
+
     MPI_Barrier(MPI_COMM_WORLD);
 
-    myA.print();
+    // myA.print();
 
   }
 

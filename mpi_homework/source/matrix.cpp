@@ -3,6 +3,7 @@
 
 #include "matrix.h"
 #include "memory.h"
+#include "densematgen.h"
 
 using std::cout;
 using std::endl;
@@ -20,6 +21,8 @@ SparseMatrix::SparseMatrix(string filePath) {
   }
 
   input >> rows >> cols >> nnz >> d;
+
+  actualRows = rows;
 
   rows_start.resize(rows);
   rows_end.resize(rows);
@@ -110,6 +113,8 @@ vector<SparseMatrixInfo> SparseMatrix::getColumnDistributionInfo(int numProcesse
       .cols = cols,
       .nnz = nnzs[i],
       .d = min(nnzs[i], colsPerProcess),
+      .actualRows = actualRows,
+      .rank = i,
     });
   }
 
@@ -172,6 +177,7 @@ void SparseMatrix::reserveSpace(SparseMatrixInfo& matrixInfo) {
   cols = matrixInfo.cols;
   nnz = matrixInfo.nnz;
   d = matrixInfo.d;
+  actualRows = matrixInfo.actualRows;
 
   rows_start.resize(rows);
   rows_end.resize(rows);
@@ -179,4 +185,41 @@ void SparseMatrix::reserveSpace(SparseMatrixInfo& matrixInfo) {
   values.resize(nnz);
 
   compact();
+}
+
+
+DenseMatrix::DenseMatrix(SparseMatrixInfo& matrixInfo, int rank,
+    int numProcesses, int seed) {
+  rows = matrixInfo.rows;
+  cols = matrixInfo.cols / numProcesses;
+  rank = rank;
+
+  values.resize(rows * cols);
+
+  for (int col = 0; col < cols; col++) {
+    int globalCol = cols * rank + col;
+    if (globalCol >= matrixInfo.actualRows) {
+      break;
+    }
+
+    for (int row = 0; row < matrixInfo.actualRows; row++) {
+      values[col * rows + row] = generate_double(seed, row, globalCol);
+    }
+  }
+
+  compact();
+}
+
+void DenseMatrix::compact() {
+  values.shrink_to_fit();
+}
+
+void DenseMatrix::print() const {
+  for (int col = 0; col < cols; col++) {
+    for (int row = 0; row < rows; row++) {
+      cout << values[col * rows + row] << " ";
+    }
+    cout << endl;
+  }
+
 }

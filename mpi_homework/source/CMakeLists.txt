@@ -43,7 +43,9 @@ set(SOURCE_FILES ${SOURCE_FILES} errors.h utils.h)
 add_library(densematgen densematgen.cpp densematgen.h)
 add_library(matrix matrix.cpp matrix.h)
 
+target_link_libraries(matrix densematgen)
+
 add_executable(matrixmul matrixmul.cpp)
-target_link_libraries(matrixmul densematgen matrix)
+target_link_libraries(matrixmul matrix)
 target_link_libraries(matrixmul mkl_intel_lp64 mkl_sequential mkl_core)
 target_link_libraries(matrixmul ${MPI_CXX_LIBRARIES})
