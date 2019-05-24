@@ -210,6 +210,24 @@ DenseMatrix::DenseMatrix(SparseMatrixInfo& matrixInfo, int rank,
   compact();
 }
 
+DenseMatrix::DenseMatrix(SparseMatrixInfo& matrixInfo, int rank, int numProcesses) {
+  rows = matrixInfo.rows;
+  cols = matrixInfo.cols / numProcesses;
+  rank = rank;
+
+  values.resize(rows * cols);
+  compact();
+}
+
+DenseMatrix::DenseMatrix(SparseMatrixInfo& matrixInfo) {
+  rows = matrixInfo.rows;
+  cols = matrixInfo.cols;
+  rank = 0;
+
+  values.resize(rows * cols);
+  compact();
+}
+
 void DenseMatrix::compact() {
   values.shrink_to_fit();
 }
@@ -222,4 +240,13 @@ void DenseMatrix::print() const {
     cout << endl;
   }
 
+}
+
+void DenseMatrix::print(int actualRows) const {
+  for (int row = 0; row < actualRows; row++) {
+    for (int col = 0; col < actualRows; col++) {
+      cout << values[col * rows + row] << " ";
+    }
+    cout << endl;
+  }
 }

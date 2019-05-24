@@ -57,7 +57,10 @@ struct DenseMatrix {
 
   DenseMatrix() = default;
   DenseMatrix(SparseMatrixInfo& matrixInfo, int rank, int numProcesses, int seed);
+  DenseMatrix(SparseMatrixInfo& matrixInfo, int rank, int numProcesses);
+  DenseMatrix(SparseMatrixInfo& matrixInfo);
 
   void compact();
   void print() const;
+  void print(int actualRows) const;
 };

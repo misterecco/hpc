@@ -30,8 +30,10 @@ int main(int argc, char** argv) {
   SparseMatrixInfo myAInfo;
   SparseMatrix myA;
   DenseMatrix myB;
+  DenseMatrix myC;
 
   // INITIAL DISTRIBUTION
+  // TODO: factor these blocks out
   if (myRank == 0) {
     config.print();
 
@@ -107,6 +109,7 @@ int main(int argc, char** argv) {
     }
 
     myB = DenseMatrix(myAInfo, myRank, numProcesses, config.seed);
+    myC = DenseMatrix(myAInfo, myRank, numProcesses);
     // myB.print();
 
     MPI_Barrier(MPI_COMM_WORLD);
@@ -149,18 +152,39 @@ int main(int argc, char** argv) {
     }
 
     myB = DenseMatrix(myAInfo, myRank, numProcesses, config.seed);
+    myC = DenseMatrix(myAInfo, myRank, numProcesses);
     // myB.print();
 
     MPI_Barrier(MPI_COMM_WORLD);
 
     // myA.print();
-
   }
 
+  // REPLICATION
+  // MPI_Comm_split(MPI_COMM_WORLD, )
+  // MPI_Comm_size(MPI_COMM_WORLD, &numProcesses);
+  // MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
 
   // sparse_matrix_t mat;
 
   // mkl_sparse_d_mm(SPARSE_OPERATION_NON_TRANSPOSE, 1.0, )
+
+  // RESULT GATHERING
+  // TODO: send back C instead of B when there is something to send
+  // TODO: different scheme for InnerABC
+  if (config.verbose) {
+    if (myRank == 0) {
+      DenseMatrix C(myAInfo);
+
+      MPI_Gather(myB.values.data(), myC.rows * myC.cols, MPI_DOUBLE,
+        C.values.data(), myC.rows * myC.cols, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+
+      C.print(myAInfo.actualRows);
+    } else {
+      MPI_Gather(myB.values.data(), myC.rows * myC.cols, MPI_DOUBLE,
+        nullptr, myC.rows * myC.cols, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+    }
+  }
 
   MPI_Finalize();
 
