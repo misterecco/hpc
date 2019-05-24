@@ -40,10 +40,11 @@ struct SparseMatrix {
 
   void addPadding(int numProcesses);
   void compact();
-  void reserveSpace(SparseMatrixInfo& matrixInfo);
+  void reserveSpace(const SparseMatrixInfo& matrixInfo);
 
   std::vector<SparseMatrixInfo> getColumnDistributionInfo(int numProcesses) const;
   std::vector<SparseMatrix> getColumnDistribution(int numProcesses) const;
+  void merge(const SparseMatrix& other);
 
   void print() const;
 };
@@ -56,9 +57,9 @@ struct DenseMatrix {
   std::vector<double> values;
 
   DenseMatrix() = default;
-  DenseMatrix(SparseMatrixInfo& matrixInfo, int rank, int numProcesses, int seed);
-  DenseMatrix(SparseMatrixInfo& matrixInfo, int rank, int numProcesses);
-  DenseMatrix(SparseMatrixInfo& matrixInfo);
+  DenseMatrix(const SparseMatrixInfo& matrixInfo, int rank, int numProcesses, int seed);
+  DenseMatrix(const SparseMatrixInfo& matrixInfo, int rank, int numProcesses);
+  DenseMatrix(const SparseMatrixInfo& matrixInfo);
 
   void compact();
   void print() const;

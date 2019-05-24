@@ -48,7 +48,7 @@ int main(int argc, char** argv) {
       MPI_Iscatter(info.data(), SparseMatrixInfo::size,
         MPI_INT, &myAInfo, SparseMatrixInfo::size, MPI_INT, 0, MPI_COMM_WORLD, &request);
 
-      myAInfo.print();
+      // myAInfo.print();
       myA.reserveSpace(myAInfo);
     }
 
@@ -123,7 +123,7 @@ int main(int argc, char** argv) {
         MPI_INT, &myAInfo, SparseMatrixInfo::size, MPI_INT, 0, MPI_COMM_WORLD, &request);
       MPI_Wait(&request, MPI_STATUS_IGNORE);
 
-      myAInfo.print();
+      // myAInfo.print();
       myA.reserveSpace(myAInfo);
     }
 
@@ -161,9 +161,74 @@ int main(int argc, char** argv) {
   }
 
   // REPLICATION
-  // MPI_Comm_split(MPI_COMM_WORLD, )
-  // MPI_Comm_size(MPI_COMM_WORLD, &numProcesses);
-  // MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
+  MPI_Comm myReplGroup;
+  // int groupCount = numProcesses / config.repl_group_size;
+  MPI_Comm_split(MPI_COMM_WORLD, myRank / config.repl_group_size,
+      myRank % config.repl_group_size, &myReplGroup);
+  int myGroupRank;
+  MPI_Comm_rank(myReplGroup, &myGroupRank);
+
+  {
+    SparseMatrix myOrigA = myA;
+
+    for (int i = 0; i < config.repl_group_size; i++) {
+      if (myGroupRank == i) {
+        {
+          MPI_Request request;
+          MPI_Ibcast(&myAInfo, SparseMatrixInfo::size, MPI_INT, i, myReplGroup,
+            &request);
+          MPI_Wait(&request, MPI_STATUS_IGNORE);
+        }
+
+        {
+          MPI_Request requests[4];
+          MPI_Ibcast(myOrigA.rows_start.data(), myOrigA.rows, MPI_INT, i, myReplGroup,
+            requests);
+          MPI_Ibcast(myOrigA.rows_end.data(), myOrigA.rows, MPI_INT, i, myReplGroup,
+            requests + 1);
+          if (myOrigA.nnz > 0) {
+            MPI_Ibcast(myOrigA.col_indx.data(), myOrigA.nnz, MPI_INT, i, myReplGroup,
+              requests + 2);
+            MPI_Ibcast(myOrigA.values.data(), myOrigA.nnz, MPI_DOUBLE, i, myReplGroup,
+              requests + 3);
+          }
+          MPI_Waitall(myOrigA.nnz > 0 ? 4 : 2, requests, MPI_STATUSES_IGNORE);
+        }
+      } else {
+        SparseMatrixInfo otherInfo;
+        SparseMatrix otherMatrix;
+
+        {
+          MPI_Request request;
+          MPI_Ibcast(&otherInfo, SparseMatrixInfo::size, MPI_INT, i, myReplGroup,
+            &request);
+          MPI_Wait(&request, MPI_STATUS_IGNORE);
+          // otherInfo.print();
+        }
+
+        otherMatrix.reserveSpace(otherInfo);
+
+        {
+          MPI_Request requests[4];
+          MPI_Ibcast(otherMatrix.rows_start.data(), otherInfo.rows, MPI_INT, i, myReplGroup,
+            requests);
+          MPI_Ibcast(otherMatrix.rows_end.data(), otherInfo.rows, MPI_INT, i, myReplGroup,
+            requests + 1);
+          if (otherInfo.nnz > 0) {
+            MPI_Ibcast(otherMatrix.col_indx.data(), otherInfo.nnz, MPI_INT, i, myReplGroup,
+              requests + 2);
+            MPI_Ibcast(otherMatrix.values.data(), otherInfo.nnz, MPI_DOUBLE, i, myReplGroup,
+              requests + 3);
+          }
+          MPI_Waitall(otherInfo.nnz > 0 ? 4 : 2, requests, MPI_STATUSES_IGNORE);
+        }
+
+        myA.merge(otherMatrix);
+      }
+    }
+  }
+
+  myA.print();
 
   // sparse_matrix_t mat;
 

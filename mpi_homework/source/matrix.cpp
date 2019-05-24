@@ -62,7 +62,7 @@ sparse_matrix_t SparseMatrix::toMklSparse() {
 }
 
 void SparseMatrix::print() const {
-  cout << rows << " " << cols << " " << nnz << " " << d << endl;
+  cout << rows << " " << cols << " " << nnz << " " << d << " " << rank << endl;
 
   for (int i = 0; i < nnz; i++) {
     cout << values[i] << " ";
@@ -165,6 +165,42 @@ vector<SparseMatrix> SparseMatrix::getColumnDistribution(int numProcesses) const
   return dist;
 }
 
+void SparseMatrix::merge(const SparseMatrix& other) {
+  nnz += other.nnz;
+  d *= 2;
+
+  vector<int> newColIndx;
+  vector<double> newValues;
+
+  for (int row = 0; row < rows; row++) {
+    int i = rows_start[row];
+    int j = other.rows_start[row];
+
+    while (i < rows_end[row] || j < other.rows_end[row]) {
+      if (i == rows_end[row]
+          || (j < other.rows_end[row] && other.col_indx[j] < col_indx[i])) {
+        newValues.push_back(other.values[j]);
+        newColIndx.push_back(other.col_indx[j]);
+        j += 1;
+      } else {
+        newValues.push_back(values[i]);
+        newColIndx.push_back(col_indx[i]);
+        i += 1;
+      }
+    }
+  }
+
+  col_indx = newColIndx;
+  values = newValues;
+
+  for (int i = 0; i < rows; i++) {
+    rows_start[i] += other.rows_start[i];
+    rows_end[i] += other.rows_end[i];
+  }
+
+  compact();
+}
+
 void SparseMatrix::compact() {
   rows_start.shrink_to_fit();
   rows_end.shrink_to_fit();
@@ -172,12 +208,13 @@ void SparseMatrix::compact() {
   values.shrink_to_fit();
 }
 
-void SparseMatrix::reserveSpace(SparseMatrixInfo& matrixInfo) {
+void SparseMatrix::reserveSpace(const SparseMatrixInfo& matrixInfo) {
   rows = matrixInfo.rows;
   cols = matrixInfo.cols;
   nnz = matrixInfo.nnz;
   d = matrixInfo.d;
   actualRows = matrixInfo.actualRows;
+  rank = matrixInfo.rank;
 
   rows_start.resize(rows);
   rows_end.resize(rows);
@@ -188,7 +225,7 @@ void SparseMatrix::reserveSpace(SparseMatrixInfo& matrixInfo) {
 }
 
 
-DenseMatrix::DenseMatrix(SparseMatrixInfo& matrixInfo, int rank,
+DenseMatrix::DenseMatrix(const SparseMatrixInfo& matrixInfo, int rank,
     int numProcesses, int seed) {
   rows = matrixInfo.rows;
   cols = matrixInfo.cols / numProcesses;
@@ -210,7 +247,7 @@ DenseMatrix::DenseMatrix(SparseMatrixInfo& matrixInfo, int rank,
   compact();
 }
 
-DenseMatrix::DenseMatrix(SparseMatrixInfo& matrixInfo, int rank, int numProcesses) {
+DenseMatrix::DenseMatrix(const SparseMatrixInfo& matrixInfo, int rank, int numProcesses) {
   rows = matrixInfo.rows;
   cols = matrixInfo.cols / numProcesses;
   rank = rank;
@@ -219,7 +256,7 @@ DenseMatrix::DenseMatrix(SparseMatrixInfo& matrixInfo, int rank, int numProcesse
   compact();
 }
 
-DenseMatrix::DenseMatrix(SparseMatrixInfo& matrixInfo) {
+DenseMatrix::DenseMatrix(const SparseMatrixInfo& matrixInfo) {
   rows = matrixInfo.rows;
   cols = matrixInfo.cols;
   rank = 0;
