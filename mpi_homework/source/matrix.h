@@ -3,28 +3,27 @@
 #include <mkl.h>
 #include <vector>
 
+struct SparseMatrix;
+
 struct SparseMatrixInfo {
   int rows;
   int cols;
   int nnz;
-  int d;
   int actualRows;
   int rank;
 
   // IMPORTANT: keep in sync with actual fields count
-  static constexpr int size = 6;
+  static constexpr int size = 5;
 
-  void print() const {
-    printf("rows: %d cols: %d actualRows: %d nnz: %d d: %d rank: %d\n",
-      rows, cols, actualRows, nnz, d, rank);
-  }
+  void print() const;
+
+  void update(SparseMatrix& mat);
 };
 
 struct SparseMatrix {
   int rows = 0;
   int cols = 0;
   int nnz = 0;
-  int d = 0; // TODO: get rid of it?
   int actualRows = 0;
   int rank = 0;
 

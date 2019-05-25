@@ -12,6 +12,19 @@ using std::min;
 using std::string;
 using std::vector;
 
+void SparseMatrixInfo::print() const {
+  printf("rows: %d cols: %d actualRows: %d nnz: %d rank: %d\n",
+    rows, cols, actualRows, nnz, rank);
+}
+
+void SparseMatrixInfo::update(SparseMatrix& mat) {
+  rows = mat.rows;
+  cols = mat.cols;
+  nnz = mat.nnz;
+  actualRows = mat.actualRows;
+  rank = mat.rank;
+}
+
 SparseMatrix::SparseMatrix(string filePath) {
   ifstream input(filePath);
 
@@ -19,6 +32,8 @@ SparseMatrix::SparseMatrix(string filePath) {
     printf("Unable to read sparse matrix file\n");
     exit(EXIT_FAILURE);
   }
+
+  int d;
 
   input >> rows >> cols >> nnz >> d;
 
@@ -62,7 +77,7 @@ sparse_matrix_t SparseMatrix::toMklSparse() {
 }
 
 void SparseMatrix::print() const {
-  cout << rows << " " << cols << " " << nnz << " " << d << " " << rank << endl;
+  cout << rows << " " << cols << " " << nnz << " " << rank << endl;
 
   for (int i = 0; i < nnz; i++) {
     cout << values[i] << " ";
@@ -85,14 +100,11 @@ void SparseMatrix::addPadding(int numProcesses) {
   int r = rows % numProcesses;
   int padding = r > 0 ? numProcesses - r : 0;
 
-  int lastRowsStartElement = rows_start.back();
-  int lastRowsEndElement = rows_end.back();
-
   rows += padding;
   cols += padding;
 
-  rows_start.resize(rows, lastRowsStartElement);
-  rows_end.resize(rows, lastRowsEndElement);
+  rows_start.resize(rows, nnz);
+  rows_end.resize(rows, nnz);
 
   compact();
 }
@@ -112,7 +124,6 @@ vector<SparseMatrixInfo> SparseMatrix::getColumnDistributionInfo(int numProcesse
       .rows = rows,
       .cols = cols,
       .nnz = nnzs[i],
-      .d = min(nnzs[i], colsPerProcess),
       .actualRows = actualRows,
       .rank = i,
     });
@@ -135,30 +146,26 @@ vector<SparseMatrix> SparseMatrix::getColumnDistribution(int numProcesses) const
     int firstInd = rows_start[rowIdx];
     int lastInd = rows_end[rowIdx];
 
-    for (int p = 0; p < numProcesses; p++) {
-      auto& frag = dist[p];
+    for (auto& frag : dist) {
       frag.rows_start.push_back(frag.values.size());
     }
 
     for (int i = firstInd; i < lastInd; i++) {
       int colIdx = col_indx[i];
       int p = colIdx / colsPerProcess;
-      // TODO: should the colIdx be adjusted here? Probably not
 
       auto& frag = dist[p];
       frag.values.push_back(values[i]);
       frag.col_indx.push_back(colIdx);
     }
 
-    for (int p = 0; p < numProcesses; p++) {
-      auto& frag = dist[p];
+    for (auto& frag : dist) {
       frag.rows_end.push_back(frag.values.size());
     }
   }
 
   for (auto& frag : dist) {
     frag.nnz = frag.values.size();
-    frag.d = min(frag.nnz, colsPerProcess);
     frag.compact();
   }
 
@@ -167,7 +174,6 @@ vector<SparseMatrix> SparseMatrix::getColumnDistribution(int numProcesses) const
 
 void SparseMatrix::merge(const SparseMatrix& other) {
   nnz += other.nnz;
-  d *= 2;
 
   vector<int> newColIndx;
   vector<double> newValues;
@@ -212,7 +218,6 @@ void SparseMatrix::reserveSpace(const SparseMatrixInfo& matrixInfo) {
   rows = matrixInfo.rows;
   cols = matrixInfo.cols;
   nnz = matrixInfo.nnz;
-  d = matrixInfo.d;
   actualRows = matrixInfo.actualRows;
   rank = matrixInfo.rank;
 
@@ -280,6 +285,7 @@ void DenseMatrix::print() const {
 }
 
 void DenseMatrix::print(int actualRows) const {
+  cout << rows << " " << cols << endl;
   for (int row = 0; row < actualRows; row++) {
     for (int col = 0; col < actualRows; col++) {
       cout << values[col * rows + row] << " ";

@@ -28,6 +28,7 @@ int main(int argc, char** argv) {
   }
 
   SparseMatrixInfo myAInfo;
+  SparseMatrixInfo myCInfo;
   SparseMatrix myA;
   DenseMatrix myB;
   DenseMatrix myC;
@@ -107,15 +108,6 @@ int main(int argc, char** argv) {
           myA.values.data(), myAInfo.nnz, MPI_DOUBLE, 0, MPI_COMM_WORLD, &request);
       }
     }
-
-    myB = DenseMatrix(myAInfo, myRank, numProcesses, config.seed);
-    myC = DenseMatrix(myAInfo, myRank, numProcesses);
-    // myB.print();
-
-    MPI_Barrier(MPI_COMM_WORLD);
-
-    // myA.print();
-
   } else {
     {
       MPI_Request request;
@@ -150,15 +142,14 @@ int main(int argc, char** argv) {
       MPI_Iscatterv(nullptr, nullptr, nullptr, MPI_DOUBLE,
         myA.values.data(), myAInfo.nnz, MPI_DOUBLE, 0, MPI_COMM_WORLD, &request);
     }
-
-    myB = DenseMatrix(myAInfo, myRank, numProcesses, config.seed);
-    myC = DenseMatrix(myAInfo, myRank, numProcesses);
-    // myB.print();
-
-    MPI_Barrier(MPI_COMM_WORLD);
-
-    // myA.print();
   }
+
+  myC = DenseMatrix(myAInfo, myRank, numProcesses, config.seed);
+  // myB.print();
+  MPI_Barrier(MPI_COMM_WORLD);
+  // myA.print();
+
+  myCInfo = myAInfo;
 
   // REPLICATION
   MPI_Comm myReplGroup;
@@ -228,25 +219,109 @@ int main(int argc, char** argv) {
     }
   }
 
-  myA.print();
+  // myA.print();
+  myAInfo.update(myA);
 
-  // sparse_matrix_t mat;
+  MPI_Comm myLayer;
+  int myLayerRank;
+  int layerSize = numProcesses / config.repl_group_size;
+  MPI_Comm_split(MPI_COMM_WORLD, myRank % config.repl_group_size,
+      myRank, &myLayer);
+  MPI_Comm_rank(myLayer, &myLayerRank);
 
-  // mkl_sparse_d_mm(SPARSE_OPERATION_NON_TRANSPOSE, 1.0, )
+  // MULTIPLICATION
+  for (int e = 0; e < config.exponent; e++) {
+    myB = myC;
+    myC = DenseMatrix(myCInfo, myRank, numProcesses);
+
+    for (int i = 0; i < layerSize; i++) {
+      SparseMatrixInfo nextAInfo;
+      SparseMatrix nextA;
+      int sendToGroupRank = myLayerRank > 0 ? (myLayerRank - 1) : layerSize - 1;
+      int recvFromGroupRank = (myLayerRank + 1) % layerSize;
+
+      if (layerSize > 1) {
+        if (myLayerRank == 0) {
+          MPI_Recv(&nextAInfo, SparseMatrixInfo::size, MPI_INT,
+            recvFromGroupRank, 0, myLayer, MPI_STATUS_IGNORE);
+          MPI_Send(&myAInfo, SparseMatrixInfo::size, MPI_INT,
+            sendToGroupRank, 0, myLayer);
+        } else {
+          MPI_Send(&myAInfo, SparseMatrixInfo::size, MPI_INT,
+            sendToGroupRank, 0, myLayer);
+          MPI_Recv(&nextAInfo, SparseMatrixInfo::size, MPI_INT,
+            recvFromGroupRank, 0, myLayer, MPI_STATUS_IGNORE);
+        }
+      }
+
+      nextA.reserveSpace(nextAInfo);
+
+      MPI_Request sendRequests[4];
+      MPI_Request recvRequests[4];
+
+      if (layerSize > 1) {
+        MPI_Isend(myA.rows_start.data(), myA.rows, MPI_INT,
+          sendToGroupRank, 1, myLayer, sendRequests);
+        MPI_Isend(myA.rows_end.data(), myA.rows, MPI_INT,
+          sendToGroupRank, 2, myLayer, sendRequests + 1);
+        if (myA.nnz > 0) {
+          MPI_Isend(myA.col_indx.data(), myA.nnz, MPI_INT,
+            sendToGroupRank, 3, myLayer, sendRequests + 2);
+          MPI_Isend(myA.values.data(), myA.nnz, MPI_DOUBLE,
+            sendToGroupRank, 4, myLayer, sendRequests + 3);
+        }
+
+        MPI_Irecv(nextA.rows_start.data(), nextAInfo.rows, MPI_INT,
+          recvFromGroupRank, 1, myLayer, recvRequests);
+        MPI_Irecv(nextA.rows_end.data(), nextAInfo.rows, MPI_INT,
+          recvFromGroupRank, 2, myLayer, recvRequests + 1);
+        if (nextAInfo.nnz > 0) {
+          MPI_Irecv(nextA.col_indx.data(), nextAInfo.nnz, MPI_INT,
+            recvFromGroupRank, 3, myLayer, recvRequests + 2);
+          MPI_Irecv(nextA.values.data(), nextAInfo.nnz, MPI_DOUBLE,
+            recvFromGroupRank, 4, myLayer, recvRequests + 3);
+        }
+      }
+
+      if (myA.nnz > 0) {
+        sparse_matrix_t myAMkl = myA.toMklSparse();
+
+        struct matrix_descr mType {
+          .type = SPARSE_MATRIX_TYPE_GENERAL,
+          // not relevant, but compiler complains without them
+          .mode = SPARSE_FILL_MODE_FULL,
+          .diag = SPARSE_DIAG_NON_UNIT,
+        };
+
+        // C := alpha*op(A)*B + beta*C
+        mkl_sparse_d_mm(SPARSE_OPERATION_NON_TRANSPOSE, 1.0, myAMkl,
+            mType, SPARSE_LAYOUT_COLUMN_MAJOR, myB.values.data(),
+            myC.cols, myB.rows, 1.0, myC.values.data(), myC.rows);
+      }
+
+      if (layerSize > 1) {
+        MPI_Waitall(myA.nnz > 0 ? 4 : 2, sendRequests, MPI_STATUSES_IGNORE);
+        MPI_Waitall(nextAInfo.nnz > 0 ? 4 : 2, recvRequests, MPI_STATUSES_IGNORE);
+
+        myA = nextA;
+        myAInfo = nextAInfo;
+      }
+    }
+  }
+
 
   // RESULT GATHERING
-  // TODO: send back C instead of B when there is something to send
   // TODO: different scheme for InnerABC
   if (config.verbose) {
     if (myRank == 0) {
       DenseMatrix C(myAInfo);
 
-      MPI_Gather(myB.values.data(), myC.rows * myC.cols, MPI_DOUBLE,
+      MPI_Gather(myC.values.data(), myC.rows * myC.cols, MPI_DOUBLE,
         C.values.data(), myC.rows * myC.cols, MPI_DOUBLE, 0, MPI_COMM_WORLD);
 
       C.print(myAInfo.actualRows);
     } else {
-      MPI_Gather(myB.values.data(), myC.rows * myC.cols, MPI_DOUBLE,
+      MPI_Gather(myC.values.data(), myC.rows * myC.cols, MPI_DOUBLE,
         nullptr, myC.rows * myC.cols, MPI_DOUBLE, 0, MPI_COMM_WORLD);
     }
   }
