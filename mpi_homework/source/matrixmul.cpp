@@ -1,5 +1,4 @@
 #include <iostream>
-#include <mkl.h>
 #include <mpi.h>
 
 #include "config.h"
@@ -14,28 +13,8 @@ void print_usage(char** argv) {
     argv[0]);
 }
 
-int main(int argc, char** argv) {
-  int numProcesses, myRank;
-
-  MPI_Init(&argc, &argv);
-  MPI_Comm_size(MPI_COMM_WORLD, &numProcesses);
-  MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
-
-  Config config(argc, argv);
-
-  if (!config.check()) {
-    if (myRank == 0) print_usage(argv);
-    exit(EXIT_FAILURE);
-  }
-
-  SparseMatrixInfo myAInfo;
-  SparseMatrixInfo myCInfo;
-  SparseMatrix myA;
-  DenseMatrix myB;
-  DenseMatrix myC;
-
-  // INITIAL DISTRIBUTION
-  // TODO: factor these blocks out
+void initialDistibution(SparseMatrixInfo& myAInfo, SparseMatrix& myA, Config& config,
+    int myRank, int numProcesses) {
   if (myRank == 0) {
     config.print();
 
@@ -144,6 +123,30 @@ int main(int argc, char** argv) {
         myA.values.data(), myAInfo.nnz, MPI_DOUBLE, 0, MPI_COMM_WORLD, &request);
     }
   }
+}
+
+
+int main(int argc, char** argv) {
+  int numProcesses, myRank;
+
+  MPI_Init(&argc, &argv);
+  MPI_Comm_size(MPI_COMM_WORLD, &numProcesses);
+  MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
+
+  Config config(argc, argv);
+
+  if (!config.check()) {
+    if (myRank == 0) print_usage(argv);
+    exit(EXIT_FAILURE);
+  }
+
+  SparseMatrixInfo myAInfo;
+  SparseMatrixInfo myCInfo;
+  SparseMatrix myA;
+  DenseMatrix myB;
+  DenseMatrix myC;
+
+  initialDistibution(myAInfo, myA, config, myRank, numProcesses);
 
   myC = DenseMatrix(myAInfo, myRank, numProcesses, config.seed);
   // myB.print();

@@ -34,7 +34,7 @@ struct SparseMatrix {
   std::vector<double> values;
 
   SparseMatrix() = default;
-  SparseMatrix(std::string& filePath);
+  SparseMatrix(const std::string& filePath);
 
   sparse_matrix_t toMklSparse();
 
