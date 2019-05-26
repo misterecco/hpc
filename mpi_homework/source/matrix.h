@@ -1,6 +1,7 @@
 #pragma once
 
 #include <mkl.h>
+#include <string>
 #include <vector>
 
 struct SparseMatrix;
@@ -33,7 +34,7 @@ struct SparseMatrix {
   std::vector<double> values;
 
   SparseMatrix() = default;
-  SparseMatrix(std::string filePath);
+  SparseMatrix(std::string& filePath);
 
   sparse_matrix_t toMklSparse();
 

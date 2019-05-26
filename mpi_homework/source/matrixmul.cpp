@@ -3,6 +3,7 @@
 #include <mpi.h>
 
 #include "config.h"
+#include "math.h"
 #include "matrix.h"
 #include "utils.h"
 
@@ -283,21 +284,7 @@ int main(int argc, char** argv) {
         }
       }
 
-      if (myA.nnz > 0) {
-        sparse_matrix_t myAMkl = myA.toMklSparse();
-
-        struct matrix_descr mType {
-          .type = SPARSE_MATRIX_TYPE_GENERAL,
-          // not relevant, but compiler complains without them
-          .mode = SPARSE_FILL_MODE_FULL,
-          .diag = SPARSE_DIAG_NON_UNIT,
-        };
-
-        // C := alpha*op(A)*B + beta*C
-        mkl_sparse_d_mm(SPARSE_OPERATION_NON_TRANSPOSE, 1.0, myAMkl,
-            mType, SPARSE_LAYOUT_COLUMN_MAJOR, myB.values.data(),
-            myC.cols, myB.rows, 1.0, myC.values.data(), myC.rows);
-      }
+      multiply(myA, myB, myC, config.use_mkl);
 
       if (layerSize > 1) {
         MPI_Waitall(myA.nnz > 0 ? 4 : 2, sendRequests, MPI_STATUSES_IGNORE);

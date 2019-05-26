@@ -25,7 +25,7 @@ void SparseMatrixInfo::update(SparseMatrix& mat) {
   rank = mat.rank;
 }
 
-SparseMatrix::SparseMatrix(string filePath) {
+SparseMatrix::SparseMatrix(string& filePath) {
   ifstream input(filePath);
 
   if (!input.is_open()) {
