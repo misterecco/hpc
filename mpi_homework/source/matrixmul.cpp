@@ -313,6 +313,18 @@ int main(int argc, char** argv) {
     }
   }
 
+  // TODO: different scheme for InnerABC
+  if (config.print_ge) {
+    int myCount = myC.countGreaterOrEqual(config.ge_value, myAInfo.actualRows);
+    int totalCount = 0;
+
+    MPI_Reduce(&myCount, &totalCount, 1, MPI_INT, MPI_SUM, 0, MPI_COMM_WORLD);
+
+    if (myRank == 0) {
+      std::cout << totalCount << std::endl;
+    }
+  }
+
   MPI_Finalize();
 
   return 0;

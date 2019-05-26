@@ -64,4 +64,5 @@ struct DenseMatrix {
   void compact();
   void print() const;
   void print(int actualRows) const;
+  int countGreaterOrEqual(double g, int actualRows) const;
 };

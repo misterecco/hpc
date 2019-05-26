@@ -234,7 +234,7 @@ DenseMatrix::DenseMatrix(const SparseMatrixInfo& matrixInfo, int rank,
     int numProcesses, int seed) {
   rows = matrixInfo.rows;
   cols = matrixInfo.cols / numProcesses;
-  rank = rank;
+  this->rank = rank;
 
   values.resize(rows * cols);
 
@@ -255,7 +255,7 @@ DenseMatrix::DenseMatrix(const SparseMatrixInfo& matrixInfo, int rank,
 DenseMatrix::DenseMatrix(const SparseMatrixInfo& matrixInfo, int rank, int numProcesses) {
   rows = matrixInfo.rows;
   cols = matrixInfo.cols / numProcesses;
-  rank = rank;
+  this->rank = rank;
 
   values.resize(rows * cols);
   compact();
@@ -292,4 +292,22 @@ void DenseMatrix::print(int actualRows) const {
     }
     cout << endl;
   }
+}
+
+int DenseMatrix::countGreaterOrEqual(double g, int actualRows) const {
+  int count = 0;
+  int firstCol = cols * rank;
+  int lastCol = std::min(cols * (rank + 1), actualRows);
+
+  for (int actualCol = firstCol; actualCol < lastCol; actualCol++) {
+    int col = actualCol - firstCol;
+
+    for (int row = 0; row < actualRows; row++) {
+      if (values[col * rows + row] >= g) {
+        count += 1;
+      }
+    }
+  }
+
+  return count;
 }
