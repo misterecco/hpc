@@ -39,8 +39,7 @@ SparseMatrix::SparseMatrix(const string& filePath) {
 
   actualRows = rows;
 
-  rows_start.resize(rows);
-  rows_end.resize(rows);
+  row_se.resize(rows+1);
   col_indx.resize(nnz);
   values.resize(nnz);
 
@@ -50,14 +49,8 @@ SparseMatrix::SparseMatrix(const string& filePath) {
     input >> values[i];
   }
 
-  input >> rows_start[0];
-
-  for (int i = 0; i < rows; i++) {
-    input >> rows_end[i];
-  }
-
-  for (int i = 1; i < rows; i++) {
-    rows_start[i] = rows_end[i-1];
+  for (int i = 0; i < rows + 1; i++) {
+    input >> row_se[i];
   }
 
   for (int i = 0; i < nnz; i++) {
@@ -68,7 +61,7 @@ SparseMatrix::SparseMatrix(const string& filePath) {
 sparse_matrix_t SparseMatrix::toMklSparse() {
   sparse_matrix_t mat;
   auto status = mkl_sparse_d_create_csr(&mat, SPARSE_INDEX_BASE_ZERO, rows, cols,
-              rows_start.data(), rows_end.data(), col_indx.data(), values.data());
+              row_se.data(), row_se.data() + 1, col_indx.data(), values.data());
   if (status != SPARSE_STATUS_SUCCESS) {
     printf("Conversion to sparse mlk failed\n");
     exit(EXIT_FAILURE);
@@ -84,9 +77,8 @@ void SparseMatrix::print() const {
   }
   cout << endl;
 
-  cout << 0 << " ";
-  for (int i = 0; i < rows; i++) {
-    cout << rows_end[i] << " ";
+  for (int i = 0; i < rows + 1; i++) {
+    cout << row_se[i] << " ";
   }
   cout << endl;
 
@@ -103,8 +95,7 @@ void SparseMatrix::addPadding(int numProcesses) {
   rows += padding;
   cols += padding;
 
-  rows_start.resize(rows, nnz);
-  rows_end.resize(rows, nnz);
+  row_se.resize(rows + 1, nnz);
 
   compact();
 }
@@ -138,17 +129,14 @@ vector<SparseMatrix> SparseMatrix::getColumnDistribution(int numProcesses) const
   for (auto& frag: dist) {
     frag.rows = rows;
     frag.cols = cols;
+    frag.row_se.push_back(0);
   }
 
   int colsPerProcess = cols / numProcesses;
 
   for (int rowIdx = 0; rowIdx < rows; rowIdx++) {
-    int firstInd = rows_start[rowIdx];
-    int lastInd = rows_end[rowIdx];
-
-    for (auto& frag : dist) {
-      frag.rows_start.push_back(frag.values.size());
-    }
+    int firstInd = row_se[rowIdx];
+    int lastInd = row_se[rowIdx + 1];
 
     for (int i = firstInd; i < lastInd; i++) {
       int colIdx = col_indx[i];
@@ -160,7 +148,7 @@ vector<SparseMatrix> SparseMatrix::getColumnDistribution(int numProcesses) const
     }
 
     for (auto& frag : dist) {
-      frag.rows_end.push_back(frag.values.size());
+      frag.row_se.push_back(frag.values.size());
     }
   }
 
@@ -179,12 +167,12 @@ void SparseMatrix::merge(const SparseMatrix& other) {
   vector<double> newValues;
 
   for (int row = 0; row < rows; row++) {
-    int i = rows_start[row];
-    int j = other.rows_start[row];
+    int i = row_se[row];
+    int j = other.row_se[row];
 
-    while (i < rows_end[row] || j < other.rows_end[row]) {
-      if (i == rows_end[row]
-          || (j < other.rows_end[row] && other.col_indx[j] < col_indx[i])) {
+    while (i < row_se[row + 1] || j < other.row_se[row + 1]) {
+      if (i == row_se[row + 1]
+          || (j < other.row_se[row + 1] && other.col_indx[j] < col_indx[i])) {
         newValues.push_back(other.values[j]);
         newColIndx.push_back(other.col_indx[j]);
         j += 1;
@@ -199,17 +187,15 @@ void SparseMatrix::merge(const SparseMatrix& other) {
   col_indx = newColIndx;
   values = newValues;
 
-  for (int i = 0; i < rows; i++) {
-    rows_start[i] += other.rows_start[i];
-    rows_end[i] += other.rows_end[i];
+  for (int i = 0; i < rows + 1; i++) {
+    row_se[i] += other.row_se[i];
   }
 
   compact();
 }
 
 void SparseMatrix::compact() {
-  rows_start.shrink_to_fit();
-  rows_end.shrink_to_fit();
+  row_se.shrink_to_fit();
   col_indx.shrink_to_fit();
   values.shrink_to_fit();
 }
@@ -221,8 +207,7 @@ void SparseMatrix::reserveSpace(const SparseMatrixInfo& matrixInfo) {
   actualRows = matrixInfo.actualRows;
   rank = matrixInfo.rank;
 
-  rows_start.resize(rows);
-  rows_end.resize(rows);
+  row_se.resize(rows + 1);
   col_indx.resize(nnz);
   values.resize(nnz);
 

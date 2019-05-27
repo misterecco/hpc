@@ -28,8 +28,7 @@ struct SparseMatrix {
   int actualRows = 0;
   int rank = 0;
 
-  std::vector<int> rows_start;
-  std::vector<int> rows_end;
+  std::vector<int> row_se;
   std::vector<int> col_indx;
   std::vector<double> values;
 

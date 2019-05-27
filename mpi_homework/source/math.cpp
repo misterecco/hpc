@@ -22,8 +22,8 @@ void multiply(SparseMatrix& A, const DenseMatrix& B, DenseMatrix& C, bool use_mk
   } else {
     for (int i = 0; i < B.rows; i++) {
       for (int j = 0; j < B.cols; j++) {
-        int firstK = A.rows_start[i];
-        int lastK = A.rows_end[i];
+        int firstK = A.row_se[i];
+        int lastK = A.row_se[i + 1];
 
         for (int k = firstK; k < lastK; k++) {
           int col = A.col_indx[k];

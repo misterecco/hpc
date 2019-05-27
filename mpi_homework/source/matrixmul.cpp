@@ -1,6 +1,7 @@
 #include <iostream>
 #include <mpi.h>
 
+#include "communication.h"
 #include "config.h"
 #include "math.h"
 #include "matrix.h"
@@ -12,119 +13,6 @@ void print_usage(char** argv) {
   printf("Usage: %s -f sparse_matrix_file -s seed_for_dense_matrix -c repl_group_size -e exponent [-g ge_value] [-v] [-i] [-m]\n",
     argv[0]);
 }
-
-void initialDistibution(SparseMatrixInfo& myAInfo, SparseMatrix& myA, Config& config,
-    int myRank, int numProcesses) {
-  if (myRank == 0) {
-    config.print();
-
-    SparseMatrix A(config.sparse_matrix_file);
-    A.addPadding(numProcesses);
-
-    // TODO: row distibution for InnerABC
-    auto info = A.getColumnDistributionInfo(numProcesses);
-
-    {
-      MPI_Request request;
-      MPI_Iscatter(info.data(), SparseMatrixInfo::size,
-        MPI_INT, &myAInfo, SparseMatrixInfo::size, MPI_INT, 0, MPI_COMM_WORLD, &request);
-
-      // myAInfo.print();
-      myA.reserveSpace(myAInfo);
-    }
-
-    // TODO: row distibution for InnerABC
-    auto frags = A.getColumnDistribution(numProcesses);
-
-    {
-      vector<int> allRowsStart;
-      for (auto& frag : frags) {
-        append(allRowsStart, frag.rows_start);
-      }
-      MPI_Request request;
-      MPI_Iscatter(allRowsStart.data(), myAInfo.rows, MPI_INT, myA.rows_start.data(),
-        myAInfo.rows, MPI_INT, 0, MPI_COMM_WORLD, &request);
-    }
-
-    {
-      vector<int> allRowsEnd;
-      for (auto& frag : frags) {
-        append(allRowsEnd, frag.rows_end);
-      }
-      MPI_Request request;
-      MPI_Iscatter(allRowsEnd.data(), myAInfo.rows, MPI_INT, myA.rows_end.data(),
-        myAInfo.rows, MPI_INT, 0, MPI_COMM_WORLD, &request);
-    }
-
-    {
-      vector<int> allNnz;
-      vector<int> allDisp;
-
-      {
-        vector<int> allColIdx;
-        for (auto& frag : frags) {
-          append(allColIdx, frag.col_indx);
-          allNnz.push_back(frag.nnz);
-        }
-
-        allDisp.push_back(0);
-        for (int i = 0; i < numProcesses - 1; i++) {
-          allDisp.push_back(allDisp.back() + allNnz[i]);
-        }
-
-        MPI_Request request;
-        MPI_Iscatterv(allColIdx.data(), allNnz.data(), allDisp.data(), MPI_INT,
-          myA.col_indx.data(), myAInfo.nnz, MPI_INT, 0, MPI_COMM_WORLD, &request);
-      }
-
-      {
-        vector<double> allValues;
-        for (auto& frag : frags) {
-          append(allValues, frag.values);
-        }
-
-        MPI_Request request;
-        MPI_Iscatterv(allValues.data(), allNnz.data(), allDisp.data(), MPI_DOUBLE,
-          myA.values.data(), myAInfo.nnz, MPI_DOUBLE, 0, MPI_COMM_WORLD, &request);
-      }
-    }
-  } else {
-    {
-      MPI_Request request;
-      MPI_Iscatter(nullptr, SparseMatrixInfo::size,
-        MPI_INT, &myAInfo, SparseMatrixInfo::size, MPI_INT, 0, MPI_COMM_WORLD, &request);
-      MPI_Wait(&request, MPI_STATUS_IGNORE);
-
-      // myAInfo.print();
-      myA.reserveSpace(myAInfo);
-    }
-
-    {
-      MPI_Request request;
-      MPI_Iscatter(nullptr, myAInfo.rows, MPI_INT, myA.rows_start.data(),
-        myAInfo.rows, MPI_INT, 0, MPI_COMM_WORLD, &request);
-    }
-
-    {
-      MPI_Request request;
-      MPI_Iscatter(nullptr, myAInfo.rows, MPI_INT, myA.rows_end.data(),
-        myAInfo.rows, MPI_INT, 0, MPI_COMM_WORLD, &request);
-    }
-
-    {
-      MPI_Request request;
-      MPI_Iscatterv(nullptr, nullptr, nullptr, MPI_INT,
-        myA.col_indx.data(), myAInfo.nnz, MPI_INT, 0, MPI_COMM_WORLD, &request);
-    }
-
-    {
-      MPI_Request request;
-      MPI_Iscatterv(nullptr, nullptr, nullptr, MPI_DOUBLE,
-        myA.values.data(), myAInfo.nnz, MPI_DOUBLE, 0, MPI_COMM_WORLD, &request);
-    }
-  }
-}
-
 
 int main(int argc, char** argv) {
   int numProcesses, myRank;
@@ -146,7 +34,7 @@ int main(int argc, char** argv) {
   DenseMatrix myB;
   DenseMatrix myC;
 
-  initialDistibution(myAInfo, myA, config, myRank, numProcesses);
+  initialize(myAInfo, myA, config, myRank, numProcesses);
 
   myC = DenseMatrix(myAInfo, myRank, numProcesses, config.seed);
   // myB.print();
@@ -176,18 +64,16 @@ int main(int argc, char** argv) {
         }
 
         {
-          MPI_Request requests[4];
-          MPI_Ibcast(myOrigA.rows_start.data(), myOrigA.rows, MPI_INT, i, myReplGroup,
+          MPI_Request requests[3];
+          MPI_Ibcast(myOrigA.row_se.data(), myOrigA.rows + 1, MPI_INT, i, myReplGroup,
             requests);
-          MPI_Ibcast(myOrigA.rows_end.data(), myOrigA.rows, MPI_INT, i, myReplGroup,
-            requests + 1);
           if (myOrigA.nnz > 0) {
             MPI_Ibcast(myOrigA.col_indx.data(), myOrigA.nnz, MPI_INT, i, myReplGroup,
-              requests + 2);
+              requests + 1);
             MPI_Ibcast(myOrigA.values.data(), myOrigA.nnz, MPI_DOUBLE, i, myReplGroup,
-              requests + 3);
+              requests + 2);
           }
-          MPI_Waitall(myOrigA.nnz > 0 ? 4 : 2, requests, MPI_STATUSES_IGNORE);
+          MPI_Waitall(myOrigA.nnz > 0 ? 3 : 1, requests, MPI_STATUSES_IGNORE);
         }
       } else {
         SparseMatrixInfo otherInfo;
@@ -204,18 +90,16 @@ int main(int argc, char** argv) {
         otherMatrix.reserveSpace(otherInfo);
 
         {
-          MPI_Request requests[4];
-          MPI_Ibcast(otherMatrix.rows_start.data(), otherInfo.rows, MPI_INT, i, myReplGroup,
+          MPI_Request requests[3];
+          MPI_Ibcast(otherMatrix.row_se.data(), otherInfo.rows + 1, MPI_INT, i, myReplGroup,
             requests);
-          MPI_Ibcast(otherMatrix.rows_end.data(), otherInfo.rows, MPI_INT, i, myReplGroup,
-            requests + 1);
           if (otherInfo.nnz > 0) {
             MPI_Ibcast(otherMatrix.col_indx.data(), otherInfo.nnz, MPI_INT, i, myReplGroup,
-              requests + 2);
+              requests + 1);
             MPI_Ibcast(otherMatrix.values.data(), otherInfo.nnz, MPI_DOUBLE, i, myReplGroup,
-              requests + 3);
+              requests + 2);
           }
-          MPI_Waitall(otherInfo.nnz > 0 ? 4 : 2, requests, MPI_STATUSES_IGNORE);
+          MPI_Waitall(otherInfo.nnz > 0 ? 3 : 1, requests, MPI_STATUSES_IGNORE);
         }
 
         myA.merge(otherMatrix);
@@ -260,38 +144,34 @@ int main(int argc, char** argv) {
 
       nextA.reserveSpace(nextAInfo);
 
-      MPI_Request sendRequests[4];
-      MPI_Request recvRequests[4];
+      MPI_Request sendRequests[3];
+      MPI_Request recvRequests[3];
 
       if (layerSize > 1) {
-        MPI_Isend(myA.rows_start.data(), myA.rows, MPI_INT,
+        MPI_Isend(myA.row_se.data(), myA.rows + 1, MPI_INT,
           sendToGroupRank, 1, myLayer, sendRequests);
-        MPI_Isend(myA.rows_end.data(), myA.rows, MPI_INT,
-          sendToGroupRank, 2, myLayer, sendRequests + 1);
         if (myA.nnz > 0) {
           MPI_Isend(myA.col_indx.data(), myA.nnz, MPI_INT,
-            sendToGroupRank, 3, myLayer, sendRequests + 2);
+            sendToGroupRank, 2, myLayer, sendRequests + 1);
           MPI_Isend(myA.values.data(), myA.nnz, MPI_DOUBLE,
-            sendToGroupRank, 4, myLayer, sendRequests + 3);
+            sendToGroupRank, 3, myLayer, sendRequests + 2);
         }
 
-        MPI_Irecv(nextA.rows_start.data(), nextAInfo.rows, MPI_INT,
+        MPI_Irecv(nextA.row_se.data(), nextAInfo.rows + 1, MPI_INT,
           recvFromGroupRank, 1, myLayer, recvRequests);
-        MPI_Irecv(nextA.rows_end.data(), nextAInfo.rows, MPI_INT,
-          recvFromGroupRank, 2, myLayer, recvRequests + 1);
         if (nextAInfo.nnz > 0) {
           MPI_Irecv(nextA.col_indx.data(), nextAInfo.nnz, MPI_INT,
-            recvFromGroupRank, 3, myLayer, recvRequests + 2);
+            recvFromGroupRank, 2, myLayer, recvRequests + 1);
           MPI_Irecv(nextA.values.data(), nextAInfo.nnz, MPI_DOUBLE,
-            recvFromGroupRank, 4, myLayer, recvRequests + 3);
+            recvFromGroupRank, 3, myLayer, recvRequests + 2);
         }
       }
 
       multiply(myA, myB, myC, config.use_mkl);
 
       if (layerSize > 1) {
-        MPI_Waitall(myA.nnz > 0 ? 4 : 2, sendRequests, MPI_STATUSES_IGNORE);
-        MPI_Waitall(nextAInfo.nnz > 0 ? 4 : 2, recvRequests, MPI_STATUSES_IGNORE);
+        MPI_Waitall(myA.nnz > 0 ? 3 : 1, sendRequests, MPI_STATUSES_IGNORE);
+        MPI_Waitall(nextAInfo.nnz > 0 ? 3 : 1, recvRequests, MPI_STATUSES_IGNORE);
 
         myA = nextA;
         myAInfo = nextAInfo;

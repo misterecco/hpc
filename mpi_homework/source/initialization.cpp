@@ -5,7 +5,7 @@
 
 using std::vector;
 
-void initialDistibution(SparseMatrixInfo& myAInfo, SparseMatrix& myA,
+void initialize(SparseMatrixInfo& myAInfo, SparseMatrix& myA,
     const Config& config, const int myRank, const int numProcesses) {
   if (myRank == 0) {
     config.print();
@@ -29,23 +29,13 @@ void initialDistibution(SparseMatrixInfo& myAInfo, SparseMatrix& myA,
     auto frags = A.getColumnDistribution(numProcesses);
 
     {
-      vector<int> allRowsStart;
+      vector<int> allRowSe;
       for (auto& frag : frags) {
-        append(allRowsStart, frag.rows_start);
+        append(allRowSe, frag.row_se);
       }
       MPI_Request request;
-      MPI_Iscatter(allRowsStart.data(), myAInfo.rows, MPI_INT, myA.rows_start.data(),
-        myAInfo.rows, MPI_INT, 0, MPI_COMM_WORLD, &request);
-    }
-
-    {
-      vector<int> allRowsEnd;
-      for (auto& frag : frags) {
-        append(allRowsEnd, frag.rows_end);
-      }
-      MPI_Request request;
-      MPI_Iscatter(allRowsEnd.data(), myAInfo.rows, MPI_INT, myA.rows_end.data(),
-        myAInfo.rows, MPI_INT, 0, MPI_COMM_WORLD, &request);
+      MPI_Iscatter(allRowSe.data(), myAInfo.rows + 1, MPI_INT, myA.row_se.data(),
+        myAInfo.rows + 1, MPI_INT, 0, MPI_COMM_WORLD, &request);
     }
 
     {
@@ -93,14 +83,8 @@ void initialDistibution(SparseMatrixInfo& myAInfo, SparseMatrix& myA,
 
     {
       MPI_Request request;
-      MPI_Iscatter(nullptr, myAInfo.rows, MPI_INT, myA.rows_start.data(),
-        myAInfo.rows, MPI_INT, 0, MPI_COMM_WORLD, &request);
-    }
-
-    {
-      MPI_Request request;
-      MPI_Iscatter(nullptr, myAInfo.rows, MPI_INT, myA.rows_end.data(),
-        myAInfo.rows, MPI_INT, 0, MPI_COMM_WORLD, &request);
+      MPI_Iscatter(nullptr, myAInfo.rows + 1, MPI_INT, myA.row_se.data(),
+        myAInfo.rows + 1, MPI_INT, 0, MPI_COMM_WORLD, &request);
     }
 
     {
