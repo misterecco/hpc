@@ -1,6 +1,6 @@
 #include <mpi.h>
 
-#include "communication.h"
+#include "matrixmul.h"
 #include "utils.h"
 
 using std::vector;

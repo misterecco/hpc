@@ -1,9 +1,9 @@
 #include <mkl.h>
 
-#include "math.h"
+#include "matrixmul.h"
 
-void multiply(SparseMatrix& A, const DenseMatrix& B, DenseMatrix& C,
-              bool use_mkl) {
+void multiplyLocal(SparseMatrix& A, const DenseMatrix& B, DenseMatrix& C,
+                   bool use_mkl) {
   if (A.nnz == 0)
     return;
 

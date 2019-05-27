@@ -7,11 +7,11 @@
 struct SparseMatrix;
 
 struct SparseMatrixInfo {
-  int rows;
-  int cols;
-  int nnz;
-  int actualRows;
-  int rank;
+  int rows = -1;
+  int cols = -1;
+  int nnz = -1;
+  int actualRows = -1;
+  int rank = -1;
 
   // IMPORTANT: keep in sync with actual fields count
   static constexpr int size = 5;
@@ -19,6 +19,8 @@ struct SparseMatrixInfo {
   void print() const;
 
   void update(SparseMatrix& mat);
+
+  bool check() const;
 };
 
 struct SparseMatrix {

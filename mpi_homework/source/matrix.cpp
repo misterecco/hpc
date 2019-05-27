@@ -25,6 +25,10 @@ void SparseMatrixInfo::update(SparseMatrix& mat) {
   rank = mat.rank;
 }
 
+bool SparseMatrixInfo::check() const {
+  return rows >= 0 && cols >= 0 && nnz >= 0 && actualRows >= 0 && rank >= 0;
+}
+
 SparseMatrix::SparseMatrix(const string& filePath) {
   ifstream input(filePath);
 
@@ -204,6 +208,10 @@ void SparseMatrix::compact() {
 }
 
 void SparseMatrix::reserveSpace(const SparseMatrixInfo& matrixInfo) {
+  if (!matrixInfo.check()) {
+    exit(EXIT_FAILURE);
+  }
+
   rows = matrixInfo.rows;
   cols = matrixInfo.cols;
   nnz = matrixInfo.nnz;

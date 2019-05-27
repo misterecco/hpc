@@ -1,10 +1,9 @@
 #include <mpi.h>
 #include <iostream>
 
-#include "communication.h"
 #include "config.h"
-#include "math.h"
 #include "matrix.h"
+#include "matrixmul.h"
 #include "utils.h"
 
 using std::vector;
@@ -67,9 +66,8 @@ int main(int argc, char** argv) {
           MPI_Recv(&nextAInfo, SparseMatrixInfo::size, MPI_INT,
                    recvFromGroupRank, 0, layer.comm, MPI_STATUS_IGNORE);
         }
+        nextA.reserveSpace(nextAInfo);
       }
-
-      nextA.reserveSpace(nextAInfo);
 
       MPI_Request sendRequests[3];
       MPI_Request recvRequests[3];
@@ -94,7 +92,7 @@ int main(int argc, char** argv) {
         }
       }
 
-      multiply(myA, myB, myC, config.use_mkl);
+      multiplyLocal(myA, myB, myC, config.use_mkl);
 
       if (layer.size > 1) {
         MPI_Waitall(myA.nnz > 0 ? 3 : 1, sendRequests, MPI_STATUSES_IGNORE);

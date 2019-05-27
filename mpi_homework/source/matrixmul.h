@@ -33,3 +33,6 @@ void initialize(SparseMatrixInfo& myAInfo, SparseMatrix& myA,
 
 void replicate(SparseMatrix& myA, SparseMatrixInfo& myAInfo,
                const MpiGroup& replGroup);
+
+void multiplyLocal(SparseMatrix& A, const DenseMatrix& B, DenseMatrix& C,
+                   bool use_mkl);

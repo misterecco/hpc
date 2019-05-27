@@ -1,6 +1,6 @@
 #include <mpi.h>
 
-#include "communication.h"
+#include "matrixmul.h"
 
 void replicate(SparseMatrix& myA, SparseMatrixInfo& myAInfo,
                const MpiGroup& replGroup) {
