@@ -14,8 +14,18 @@ void initialize(SparseMatrixInfo& myAInfo, SparseMatrix& myA,
     SparseMatrix A(config.sparse_matrix_file);
     A.addPadding(world.size);
 
-    // TODO: row distibution for InnerABC
-    auto info = A.getColumnDistributionInfo(world.size);
+    vector<SparseMatrixInfo> info;
+    if (config.use_inner) {
+      info = A.getRowDistributionInfo(world.size);
+    } else {
+      info = A.getColumnDistributionInfo(world.size);
+    }
+
+    A.print();
+
+    for (const auto& i : info) {
+      i.print();
+    }
 
     {
       MPI_Request request;
@@ -26,8 +36,17 @@ void initialize(SparseMatrixInfo& myAInfo, SparseMatrix& myA,
       myA.reserveSpace(myAInfo);
     }
 
-    // TODO: row distibution for InnerABC
-    auto frags = A.getColumnDistribution(world.size);
+    vector<SparseMatrix> frags;
+    if (config.use_inner) {
+      frags = A.getRowDistribution(world.size);
+    } else {
+      frags = A.getColumnDistribution(world.size);
+    }
+
+    for (const auto& frag: frags) {
+      frag.print();
+    }
+    printf("========================\n");
 
     {
       vector<int> allRowSe;
@@ -107,6 +126,8 @@ void initialize(SparseMatrixInfo& myAInfo, SparseMatrix& myA,
   myC = DenseMatrix(myAInfo, world.rank, world.size, config.seed);
 
   MPI_Barrier(MPI_COMM_WORLD);
+
+  myA.print();
 
   myCInfo = myAInfo;
 }

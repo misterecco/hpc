@@ -167,6 +167,68 @@ vector<SparseMatrix> SparseMatrix::getColumnDistribution(
   return dist;
 }
 
+vector<SparseMatrixInfo> SparseMatrix::getRowDistributionInfo(
+    int numProcesses) const {
+  vector<SparseMatrixInfo> dist;
+
+  int rowsPerProcess = rows / numProcesses;
+
+  for (int i = 0; i < numProcesses; i++) {
+    int startRow = i * rowsPerProcess;
+    int endRow = (i + 1) * rowsPerProcess;
+
+    dist.push_back({
+        .rows = rows,
+        .cols = cols,
+        .nnz = row_se[endRow] - row_se[startRow],
+        .actualRows = actualRows,
+        .rank = i,
+    });
+  }
+
+  return dist;
+}
+
+vector<SparseMatrix> SparseMatrix::getRowDistribution(int numProcesses) const {
+  vector<SparseMatrix> dist(numProcesses);
+
+  int i = 0;
+  for (auto& frag : dist) {
+    frag.rows = rows;
+    frag.cols = cols;
+    frag.row_se.push_back(0);
+    frag.actualRows = actualRows;
+    frag.rank = i++;
+  }
+
+  int rowsPerProcess = rows / numProcesses;
+
+  for (int p = 0; p < numProcesses; p++) {
+    int startRow = p * rowsPerProcess;
+    int endRow = (p + 1) * rowsPerProcess;
+
+    auto& frag = dist[p];
+
+    for (int row = startRow; row < endRow; row++) {
+      for (int i = row_se[row]; i < row_se[row+1]; i++) {
+        frag.values.push_back(values[i]);
+        frag.col_indx.push_back(col_indx[i]);
+      }
+
+      for (auto& frag : dist) {
+        frag.row_se.push_back(frag.values.size());
+      }
+    }
+  }
+
+  for (auto& frag : dist) {
+    frag.nnz = frag.values.size();
+    frag.compact();
+  }
+
+  return dist;
+}
+
 void SparseMatrix::merge(const SparseMatrix& other) {
   nnz += other.nnz;
 

@@ -46,6 +46,8 @@ struct SparseMatrix {
   std::vector<SparseMatrixInfo> getColumnDistributionInfo(
       int numProcesses) const;
   std::vector<SparseMatrix> getColumnDistribution(int numProcesses) const;
+  std::vector<SparseMatrixInfo> getRowDistributionInfo(int numProcesses) const;
+  std::vector<SparseMatrix> getRowDistribution(int numProcesses) const;
   void merge(const SparseMatrix& other);
 
   void print() const;

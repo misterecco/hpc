@@ -40,16 +40,13 @@ int main(int argc, char** argv) {
   initialize(myAInfo, myA, myCInfo, myC, config, world);
 
   replicate(myA, myAInfo, replGroup);
-  // myA.print();
 
   multiply(myAInfo, myCInfo, myA, myB, myC, config, world, layer);
 
-  // TODO: different scheme for InnerABC
   if (config.verbose) {
     gatherC(myCInfo, myC, world);
   }
 
-  // TODO: different scheme for InnerABC
   if (config.print_ge) {
     countGe(myCInfo, myC, config.ge_value, world);
   }
