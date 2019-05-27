@@ -6,6 +6,7 @@
 using std::vector;
 
 void initialize(SparseMatrixInfo& myAInfo, SparseMatrix& myA,
+    SparseMatrixInfo& myCInfo, DenseMatrix& myC,
     const Config& config, const int myRank, const int numProcesses) {
   if (myRank == 0) {
     config.print();
@@ -21,7 +22,6 @@ void initialize(SparseMatrixInfo& myAInfo, SparseMatrix& myA,
       MPI_Iscatter(info.data(), SparseMatrixInfo::size,
         MPI_INT, &myAInfo, SparseMatrixInfo::size, MPI_INT, 0, MPI_COMM_WORLD, &request);
 
-      // myAInfo.print();
       myA.reserveSpace(myAInfo);
     }
 
@@ -77,7 +77,6 @@ void initialize(SparseMatrixInfo& myAInfo, SparseMatrix& myA,
         MPI_INT, &myAInfo, SparseMatrixInfo::size, MPI_INT, 0, MPI_COMM_WORLD, &request);
       MPI_Wait(&request, MPI_STATUS_IGNORE);
 
-      // myAInfo.print();
       myA.reserveSpace(myAInfo);
     }
 
@@ -99,4 +98,10 @@ void initialize(SparseMatrixInfo& myAInfo, SparseMatrix& myA,
         myA.values.data(), myAInfo.nnz, MPI_DOUBLE, 0, MPI_COMM_WORLD, &request);
     }
   }
+
+  myC = DenseMatrix(myAInfo, myRank, numProcesses, config.seed);
+
+  MPI_Barrier(MPI_COMM_WORLD);
+
+  myCInfo = myAInfo;
 }

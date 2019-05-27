@@ -34,14 +34,7 @@ int main(int argc, char** argv) {
   DenseMatrix myB;
   DenseMatrix myC;
 
-  initialize(myAInfo, myA, config, myRank, numProcesses);
-
-  myC = DenseMatrix(myAInfo, myRank, numProcesses, config.seed);
-  // myB.print();
-  MPI_Barrier(MPI_COMM_WORLD);
-  // myA.print();
-
-  myCInfo = myAInfo;
+  initialize(myAInfo, myA, myCInfo, myC, config, myRank, numProcesses);
 
   // REPLICATION
   MPI_Comm myReplGroup;
@@ -51,65 +44,11 @@ int main(int argc, char** argv) {
   int myGroupRank;
   MPI_Comm_rank(myReplGroup, &myGroupRank);
 
-  {
-    SparseMatrix myOrigA = myA;
-
-    for (int i = 0; i < config.repl_group_size; i++) {
-      if (myGroupRank == i) {
-        {
-          MPI_Request request;
-          MPI_Ibcast(&myAInfo, SparseMatrixInfo::size, MPI_INT, i, myReplGroup,
-            &request);
-          MPI_Wait(&request, MPI_STATUS_IGNORE);
-        }
-
-        {
-          MPI_Request requests[3];
-          MPI_Ibcast(myOrigA.row_se.data(), myOrigA.rows + 1, MPI_INT, i, myReplGroup,
-            requests);
-          if (myOrigA.nnz > 0) {
-            MPI_Ibcast(myOrigA.col_indx.data(), myOrigA.nnz, MPI_INT, i, myReplGroup,
-              requests + 1);
-            MPI_Ibcast(myOrigA.values.data(), myOrigA.nnz, MPI_DOUBLE, i, myReplGroup,
-              requests + 2);
-          }
-          MPI_Waitall(myOrigA.nnz > 0 ? 3 : 1, requests, MPI_STATUSES_IGNORE);
-        }
-      } else {
-        SparseMatrixInfo otherInfo;
-        SparseMatrix otherMatrix;
-
-        {
-          MPI_Request request;
-          MPI_Ibcast(&otherInfo, SparseMatrixInfo::size, MPI_INT, i, myReplGroup,
-            &request);
-          MPI_Wait(&request, MPI_STATUS_IGNORE);
-          // otherInfo.print();
-        }
-
-        otherMatrix.reserveSpace(otherInfo);
-
-        {
-          MPI_Request requests[3];
-          MPI_Ibcast(otherMatrix.row_se.data(), otherInfo.rows + 1, MPI_INT, i, myReplGroup,
-            requests);
-          if (otherInfo.nnz > 0) {
-            MPI_Ibcast(otherMatrix.col_indx.data(), otherInfo.nnz, MPI_INT, i, myReplGroup,
-              requests + 1);
-            MPI_Ibcast(otherMatrix.values.data(), otherInfo.nnz, MPI_DOUBLE, i, myReplGroup,
-              requests + 2);
-          }
-          MPI_Waitall(otherInfo.nnz > 0 ? 3 : 1, requests, MPI_STATUSES_IGNORE);
-        }
-
-        myA.merge(otherMatrix);
-      }
-    }
-  }
+  replicate(myA, myAInfo, myReplGroup, myGroupRank, config.repl_group_size);
 
   // myA.print();
-  myAInfo.update(myA);
 
+  // MULTIPLICATION
   MPI_Comm myLayer;
   int myLayerRank;
   int layerSize = numProcesses / config.repl_group_size;
@@ -117,7 +56,6 @@ int main(int argc, char** argv) {
       myRank, &myLayer);
   MPI_Comm_rank(myLayer, &myLayerRank);
 
-  // MULTIPLICATION
   for (int e = 0; e < config.exponent; e++) {
     myB = myC;
     myC = DenseMatrix(myCInfo, myRank, numProcesses);
