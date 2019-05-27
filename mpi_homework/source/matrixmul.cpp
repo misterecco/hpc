@@ -15,16 +15,15 @@ void print_usage(char** argv) {
 }
 
 int main(int argc, char** argv) {
-  int numProcesses, myRank;
+  MpiGroup world, replGroup, layer;
 
   MPI_Init(&argc, &argv);
-  MPI_Comm_size(MPI_COMM_WORLD, &numProcesses);
-  MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
-
   Config config(argc, argv);
 
+  world.initWorld();
+
   if (!config.check()) {
-    if (myRank == 0) print_usage(argv);
+    if (world.rank == 0) print_usage(argv);
     exit(EXIT_FAILURE);
   }
 
@@ -34,49 +33,36 @@ int main(int argc, char** argv) {
   DenseMatrix myB;
   DenseMatrix myC;
 
-  initialize(myAInfo, myA, myCInfo, myC, config, myRank, numProcesses);
+  replGroup.initCustom(world.rank / config.repl_group_size, world.rank);
+  layer.initCustom(world.rank % config.repl_group_size, world.rank);
 
-  // REPLICATION
-  MPI_Comm myReplGroup;
-  // int groupCount = numProcesses / config.repl_group_size;
-  MPI_Comm_split(MPI_COMM_WORLD, myRank / config.repl_group_size,
-      myRank % config.repl_group_size, &myReplGroup);
-  int myGroupRank;
-  MPI_Comm_rank(myReplGroup, &myGroupRank);
+  initialize(myAInfo, myA, myCInfo, myC, config, world);
 
-  replicate(myA, myAInfo, myReplGroup, myGroupRank, config.repl_group_size);
+  replicate(myA, myAInfo, replGroup);
 
   // myA.print();
 
-  // MULTIPLICATION
-  MPI_Comm myLayer;
-  int myLayerRank;
-  int layerSize = numProcesses / config.repl_group_size;
-  MPI_Comm_split(MPI_COMM_WORLD, myRank % config.repl_group_size,
-      myRank, &myLayer);
-  MPI_Comm_rank(myLayer, &myLayerRank);
-
   for (int e = 0; e < config.exponent; e++) {
     myB = myC;
-    myC = DenseMatrix(myCInfo, myRank, numProcesses);
+    myC = DenseMatrix(myCInfo, world.rank, world.size);
 
-    for (int i = 0; i < layerSize; i++) {
+    for (int i = 0; i < layer.size; i++) {
       SparseMatrixInfo nextAInfo;
       SparseMatrix nextA;
-      int sendToGroupRank = myLayerRank > 0 ? (myLayerRank - 1) : layerSize - 1;
-      int recvFromGroupRank = (myLayerRank + 1) % layerSize;
+      int sendToGroupRank = layer.rank > 0 ? (layer.rank - 1) : layer.size - 1;
+      int recvFromGroupRank = (layer.rank + 1) % layer.size;
 
-      if (layerSize > 1) {
-        if (myLayerRank == 0) {
+      if (layer.size > 1) {
+        if (layer.rank == 0) {
           MPI_Recv(&nextAInfo, SparseMatrixInfo::size, MPI_INT,
-            recvFromGroupRank, 0, myLayer, MPI_STATUS_IGNORE);
+            recvFromGroupRank, 0, layer.comm, MPI_STATUS_IGNORE);
           MPI_Send(&myAInfo, SparseMatrixInfo::size, MPI_INT,
-            sendToGroupRank, 0, myLayer);
+            sendToGroupRank, 0, layer.comm);
         } else {
           MPI_Send(&myAInfo, SparseMatrixInfo::size, MPI_INT,
-            sendToGroupRank, 0, myLayer);
+            sendToGroupRank, 0, layer.comm);
           MPI_Recv(&nextAInfo, SparseMatrixInfo::size, MPI_INT,
-            recvFromGroupRank, 0, myLayer, MPI_STATUS_IGNORE);
+            recvFromGroupRank, 0, layer.comm, MPI_STATUS_IGNORE);
         }
       }
 
@@ -85,29 +71,29 @@ int main(int argc, char** argv) {
       MPI_Request sendRequests[3];
       MPI_Request recvRequests[3];
 
-      if (layerSize > 1) {
+      if (layer.size > 1) {
         MPI_Isend(myA.row_se.data(), myA.rows + 1, MPI_INT,
-          sendToGroupRank, 1, myLayer, sendRequests);
+          sendToGroupRank, 1, layer.comm, sendRequests);
         if (myA.nnz > 0) {
           MPI_Isend(myA.col_indx.data(), myA.nnz, MPI_INT,
-            sendToGroupRank, 2, myLayer, sendRequests + 1);
+            sendToGroupRank, 2, layer.comm, sendRequests + 1);
           MPI_Isend(myA.values.data(), myA.nnz, MPI_DOUBLE,
-            sendToGroupRank, 3, myLayer, sendRequests + 2);
+            sendToGroupRank, 3, layer.comm, sendRequests + 2);
         }
 
         MPI_Irecv(nextA.row_se.data(), nextAInfo.rows + 1, MPI_INT,
-          recvFromGroupRank, 1, myLayer, recvRequests);
+          recvFromGroupRank, 1, layer.comm, recvRequests);
         if (nextAInfo.nnz > 0) {
           MPI_Irecv(nextA.col_indx.data(), nextAInfo.nnz, MPI_INT,
-            recvFromGroupRank, 2, myLayer, recvRequests + 1);
+            recvFromGroupRank, 2, layer.comm, recvRequests + 1);
           MPI_Irecv(nextA.values.data(), nextAInfo.nnz, MPI_DOUBLE,
-            recvFromGroupRank, 3, myLayer, recvRequests + 2);
+            recvFromGroupRank, 3, layer.comm, recvRequests + 2);
         }
       }
 
       multiply(myA, myB, myC, config.use_mkl);
 
-      if (layerSize > 1) {
+      if (layer.size > 1) {
         MPI_Waitall(myA.nnz > 0 ? 3 : 1, sendRequests, MPI_STATUSES_IGNORE);
         MPI_Waitall(nextAInfo.nnz > 0 ? 3 : 1, recvRequests, MPI_STATUSES_IGNORE);
 
@@ -121,7 +107,7 @@ int main(int argc, char** argv) {
   // RESULT GATHERING
   // TODO: different scheme for InnerABC
   if (config.verbose) {
-    if (myRank == 0) {
+    if (world.rank == 0) {
       DenseMatrix C(myAInfo);
 
       MPI_Gather(myC.values.data(), myC.rows * myC.cols, MPI_DOUBLE,
@@ -141,7 +127,7 @@ int main(int argc, char** argv) {
 
     MPI_Reduce(&myCount, &totalCount, 1, MPI_INT, MPI_SUM, 0, MPI_COMM_WORLD);
 
-    if (myRank == 0) {
+    if (world.rank == 0) {
       std::cout << totalCount << std::endl;
     }
   }

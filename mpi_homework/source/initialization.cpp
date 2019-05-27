@@ -7,15 +7,15 @@ using std::vector;
 
 void initialize(SparseMatrixInfo& myAInfo, SparseMatrix& myA,
     SparseMatrixInfo& myCInfo, DenseMatrix& myC,
-    const Config& config, const int myRank, const int numProcesses) {
-  if (myRank == 0) {
+    const Config& config, const MpiGroup& world) {
+  if (world.rank == 0) {
     config.print();
 
     SparseMatrix A(config.sparse_matrix_file);
-    A.addPadding(numProcesses);
+    A.addPadding(world.size);
 
     // TODO: row distibution for InnerABC
-    auto info = A.getColumnDistributionInfo(numProcesses);
+    auto info = A.getColumnDistributionInfo(world.size);
 
     {
       MPI_Request request;
@@ -26,7 +26,7 @@ void initialize(SparseMatrixInfo& myAInfo, SparseMatrix& myA,
     }
 
     // TODO: row distibution for InnerABC
-    auto frags = A.getColumnDistribution(numProcesses);
+    auto frags = A.getColumnDistribution(world.size);
 
     {
       vector<int> allRowSe;
@@ -50,7 +50,7 @@ void initialize(SparseMatrixInfo& myAInfo, SparseMatrix& myA,
         }
 
         allDisp.push_back(0);
-        for (int i = 0; i < numProcesses - 1; i++) {
+        for (int i = 0; i < world.size - 1; i++) {
           allDisp.push_back(allDisp.back() + allNnz[i]);
         }
 
@@ -99,7 +99,7 @@ void initialize(SparseMatrixInfo& myAInfo, SparseMatrix& myA,
     }
   }
 
-  myC = DenseMatrix(myAInfo, myRank, numProcesses, config.seed);
+  myC = DenseMatrix(myAInfo, world.rank, world.size, config.seed);
 
   MPI_Barrier(MPI_COMM_WORLD);
 
