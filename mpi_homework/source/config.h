@@ -46,8 +46,8 @@ struct Config {
 
   void print() const {
     printf("Config: \n");
-    printf("-f %s -s %i -c %d -e %d ", sparse_matrix_file.c_str(),
-           seed, repl_group_size, exponent);
+    printf("-f %s -s %i -c %d -e %d ", sparse_matrix_file.c_str(), seed,
+           repl_group_size, exponent);
     if (print_ge) {
       printf("-g %f ", ge_value);
     }

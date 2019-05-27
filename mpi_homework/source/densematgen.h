@@ -13,7 +13,7 @@
 
 /**
  * Generates a single matrix entry at (row, col).
- * 
+ *
  * Stateless generator
  * @param seed seed for the generator (some seeds switch op mode).
  * @param row row coordinate of the generated element.

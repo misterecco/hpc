@@ -1,9 +1,9 @@
 #include <fstream>
 #include <iostream>
 
+#include "densematgen.h"
 #include "matrix.h"
 #include "memory.h"
-#include "densematgen.h"
 
 using std::cout;
 using std::endl;
@@ -13,8 +13,8 @@ using std::string;
 using std::vector;
 
 void SparseMatrixInfo::print() const {
-  printf("rows: %d cols: %d actualRows: %d nnz: %d rank: %d\n",
-    rows, cols, actualRows, nnz, rank);
+  printf("rows: %d cols: %d actualRows: %d nnz: %d rank: %d\n", rows, cols,
+         actualRows, nnz, rank);
 }
 
 void SparseMatrixInfo::update(SparseMatrix& mat) {
@@ -39,7 +39,7 @@ SparseMatrix::SparseMatrix(const string& filePath) {
 
   actualRows = rows;
 
-  row_se.resize(rows+1);
+  row_se.resize(rows + 1);
   col_indx.resize(nnz);
   values.resize(nnz);
 
@@ -60,8 +60,9 @@ SparseMatrix::SparseMatrix(const string& filePath) {
 
 sparse_matrix_t SparseMatrix::toMklSparse() {
   sparse_matrix_t mat;
-  auto status = mkl_sparse_d_create_csr(&mat, SPARSE_INDEX_BASE_ZERO, rows, cols,
-              row_se.data(), row_se.data() + 1, col_indx.data(), values.data());
+  auto status = mkl_sparse_d_create_csr(&mat, SPARSE_INDEX_BASE_ZERO, rows,
+                                        cols, row_se.data(), row_se.data() + 1,
+                                        col_indx.data(), values.data());
   if (status != SPARSE_STATUS_SUCCESS) {
     printf("Conversion to sparse mlk failed\n");
     exit(EXIT_FAILURE);
@@ -100,7 +101,8 @@ void SparseMatrix::addPadding(int numProcesses) {
   compact();
 }
 
-vector<SparseMatrixInfo> SparseMatrix::getColumnDistributionInfo(int numProcesses) const {
+vector<SparseMatrixInfo> SparseMatrix::getColumnDistributionInfo(
+    int numProcesses) const {
   vector<SparseMatrixInfo> dist;
 
   int colsPerProcess = cols / numProcesses;
@@ -112,21 +114,22 @@ vector<SparseMatrixInfo> SparseMatrix::getColumnDistributionInfo(int numProcesse
 
   for (int i = 0; i < numProcesses; i++) {
     dist.push_back({
-      .rows = rows,
-      .cols = cols,
-      .nnz = nnzs[i],
-      .actualRows = actualRows,
-      .rank = i,
+        .rows = rows,
+        .cols = cols,
+        .nnz = nnzs[i],
+        .actualRows = actualRows,
+        .rank = i,
     });
   }
 
   return dist;
 }
 
-vector<SparseMatrix> SparseMatrix::getColumnDistribution(int numProcesses) const {
+vector<SparseMatrix> SparseMatrix::getColumnDistribution(
+    int numProcesses) const {
   vector<SparseMatrix> dist(numProcesses);
 
-  for (auto& frag: dist) {
+  for (auto& frag : dist) {
     frag.rows = rows;
     frag.cols = cols;
     frag.row_se.push_back(0);
@@ -171,8 +174,8 @@ void SparseMatrix::merge(const SparseMatrix& other) {
     int j = other.row_se[row];
 
     while (i < row_se[row + 1] || j < other.row_se[row + 1]) {
-      if (i == row_se[row + 1]
-          || (j < other.row_se[row + 1] && other.col_indx[j] < col_indx[i])) {
+      if (i == row_se[row + 1] ||
+          (j < other.row_se[row + 1] && other.col_indx[j] < col_indx[i])) {
         newValues.push_back(other.values[j]);
         newColIndx.push_back(other.col_indx[j]);
         j += 1;
@@ -214,9 +217,8 @@ void SparseMatrix::reserveSpace(const SparseMatrixInfo& matrixInfo) {
   compact();
 }
 
-
 DenseMatrix::DenseMatrix(const SparseMatrixInfo& matrixInfo, int rank,
-    int numProcesses, int seed) {
+                         int numProcesses, int seed) {
   rows = matrixInfo.rows;
   cols = matrixInfo.cols / numProcesses;
   this->rank = rank;
@@ -237,7 +239,8 @@ DenseMatrix::DenseMatrix(const SparseMatrixInfo& matrixInfo, int rank,
   compact();
 }
 
-DenseMatrix::DenseMatrix(const SparseMatrixInfo& matrixInfo, int rank, int numProcesses) {
+DenseMatrix::DenseMatrix(const SparseMatrixInfo& matrixInfo, int rank,
+                         int numProcesses) {
   rows = matrixInfo.rows;
   cols = matrixInfo.cols / numProcesses;
   this->rank = rank;
@@ -255,9 +258,7 @@ DenseMatrix::DenseMatrix(const SparseMatrixInfo& matrixInfo) {
   compact();
 }
 
-void DenseMatrix::compact() {
-  values.shrink_to_fit();
-}
+void DenseMatrix::compact() { values.shrink_to_fit(); }
 
 void DenseMatrix::print() const {
   for (int col = 0; col < cols; col++) {
@@ -266,7 +267,6 @@ void DenseMatrix::print() const {
     }
     cout << endl;
   }
-
 }
 
 void DenseMatrix::print(int actualRows) const {

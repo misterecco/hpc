@@ -6,8 +6,8 @@
 using std::vector;
 
 void initialize(SparseMatrixInfo& myAInfo, SparseMatrix& myA,
-    SparseMatrixInfo& myCInfo, DenseMatrix& myC,
-    const Config& config, const MpiGroup& world) {
+                SparseMatrixInfo& myCInfo, DenseMatrix& myC,
+                const Config& config, const MpiGroup& world) {
   if (world.rank == 0) {
     config.print();
 
@@ -19,8 +19,9 @@ void initialize(SparseMatrixInfo& myAInfo, SparseMatrix& myA,
 
     {
       MPI_Request request;
-      MPI_Iscatter(info.data(), SparseMatrixInfo::size,
-        MPI_INT, &myAInfo, SparseMatrixInfo::size, MPI_INT, 0, MPI_COMM_WORLD, &request);
+      MPI_Iscatter(info.data(), SparseMatrixInfo::size, MPI_INT, &myAInfo,
+                   SparseMatrixInfo::size, MPI_INT, 0, MPI_COMM_WORLD,
+                   &request);
 
       myA.reserveSpace(myAInfo);
     }
@@ -34,8 +35,9 @@ void initialize(SparseMatrixInfo& myAInfo, SparseMatrix& myA,
         append(allRowSe, frag.row_se);
       }
       MPI_Request request;
-      MPI_Iscatter(allRowSe.data(), myAInfo.rows + 1, MPI_INT, myA.row_se.data(),
-        myAInfo.rows + 1, MPI_INT, 0, MPI_COMM_WORLD, &request);
+      MPI_Iscatter(allRowSe.data(), myAInfo.rows + 1, MPI_INT,
+                   myA.row_se.data(), myAInfo.rows + 1, MPI_INT, 0,
+                   MPI_COMM_WORLD, &request);
     }
 
     {
@@ -56,7 +58,8 @@ void initialize(SparseMatrixInfo& myAInfo, SparseMatrix& myA,
 
         MPI_Request request;
         MPI_Iscatterv(allColIdx.data(), allNnz.data(), allDisp.data(), MPI_INT,
-          myA.col_indx.data(), myAInfo.nnz, MPI_INT, 0, MPI_COMM_WORLD, &request);
+                      myA.col_indx.data(), myAInfo.nnz, MPI_INT, 0,
+                      MPI_COMM_WORLD, &request);
       }
 
       {
@@ -66,15 +69,17 @@ void initialize(SparseMatrixInfo& myAInfo, SparseMatrix& myA,
         }
 
         MPI_Request request;
-        MPI_Iscatterv(allValues.data(), allNnz.data(), allDisp.data(), MPI_DOUBLE,
-          myA.values.data(), myAInfo.nnz, MPI_DOUBLE, 0, MPI_COMM_WORLD, &request);
+        MPI_Iscatterv(allValues.data(), allNnz.data(), allDisp.data(),
+                      MPI_DOUBLE, myA.values.data(), myAInfo.nnz, MPI_DOUBLE, 0,
+                      MPI_COMM_WORLD, &request);
       }
     }
   } else {
     {
       MPI_Request request;
-      MPI_Iscatter(nullptr, SparseMatrixInfo::size,
-        MPI_INT, &myAInfo, SparseMatrixInfo::size, MPI_INT, 0, MPI_COMM_WORLD, &request);
+      MPI_Iscatter(nullptr, SparseMatrixInfo::size, MPI_INT, &myAInfo,
+                   SparseMatrixInfo::size, MPI_INT, 0, MPI_COMM_WORLD,
+                   &request);
       MPI_Wait(&request, MPI_STATUS_IGNORE);
 
       myA.reserveSpace(myAInfo);
@@ -83,19 +88,19 @@ void initialize(SparseMatrixInfo& myAInfo, SparseMatrix& myA,
     {
       MPI_Request request;
       MPI_Iscatter(nullptr, myAInfo.rows + 1, MPI_INT, myA.row_se.data(),
-        myAInfo.rows + 1, MPI_INT, 0, MPI_COMM_WORLD, &request);
+                   myAInfo.rows + 1, MPI_INT, 0, MPI_COMM_WORLD, &request);
     }
 
     {
       MPI_Request request;
-      MPI_Iscatterv(nullptr, nullptr, nullptr, MPI_INT,
-        myA.col_indx.data(), myAInfo.nnz, MPI_INT, 0, MPI_COMM_WORLD, &request);
+      MPI_Iscatterv(nullptr, nullptr, nullptr, MPI_INT, myA.col_indx.data(),
+                    myAInfo.nnz, MPI_INT, 0, MPI_COMM_WORLD, &request);
     }
 
     {
       MPI_Request request;
-      MPI_Iscatterv(nullptr, nullptr, nullptr, MPI_DOUBLE,
-        myA.values.data(), myAInfo.nnz, MPI_DOUBLE, 0, MPI_COMM_WORLD, &request);
+      MPI_Iscatterv(nullptr, nullptr, nullptr, MPI_DOUBLE, myA.values.data(),
+                    myAInfo.nnz, MPI_DOUBLE, 0, MPI_COMM_WORLD, &request);
     }
   }
 
