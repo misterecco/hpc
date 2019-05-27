@@ -38,7 +38,6 @@ link_directories(${MPI_CXX_LIBRARIES})
 
 # DEFINE PROJECT FILES
 
-
 set(SOURCE_FILES ${SOURCE_FILES} errors.h utils.h matrixmul.h)
 
 add_library(densematgen densematgen.cpp densematgen.h)
@@ -46,7 +45,7 @@ add_library(matrix matrix.cpp matrix.h)
 add_library(initialization initialization.cpp)
 add_library(replication replication.cpp)
 add_library(multiplication multiplication.cpp)
-# add_library(gathering gathering.cpp)
+add_library(gathering gathering.cpp)
 
 target_link_libraries(matrix densematgen)
 
@@ -55,5 +54,5 @@ target_link_libraries(multiplication mkl_intel_lp64 mkl_sequential mkl_core)
 
 add_executable(matrixmul matrixmul.cpp)
 target_link_libraries(matrixmul
-    matrix initialization replication multiplication )
+    matrix initialization replication multiplication gathering)
 target_link_libraries(matrixmul ${MPI_CXX_LIBRARIES})

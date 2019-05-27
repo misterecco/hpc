@@ -34,5 +34,16 @@ void initialize(SparseMatrixInfo& myAInfo, SparseMatrix& myA,
 void replicate(SparseMatrix& myA, SparseMatrixInfo& myAInfo,
                const MpiGroup& replGroup);
 
+void multiply(SparseMatrixInfo& myAInfo, SparseMatrixInfo& myCInfo,
+              SparseMatrix& myA, DenseMatrix& myB, DenseMatrix& myC,
+              const Config& config, const MpiGroup& world,
+              const MpiGroup& layer);
+
 void multiplyLocal(SparseMatrix& A, const DenseMatrix& B, DenseMatrix& C,
                    bool use_mkl);
+
+void gatherC(const SparseMatrixInfo& myCInfo, DenseMatrix& myC,
+             const MpiGroup& world);
+
+void countGe(const SparseMatrixInfo& myCInfo, const DenseMatrix& myC, double g,
+             const MpiGroup& world);
