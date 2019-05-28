@@ -15,12 +15,10 @@ void print_usage(char** argv) {
 }
 
 int main(int argc, char** argv) {
-  MpiGroup world, replGroup, layer;
-
   MPI_Init(&argc, &argv);
   Config config(argc, argv);
 
-  world.initWorld();
+  MpiGroup world;
 
   if (!config.check()) {
     if (world.rank == 0)
@@ -34,12 +32,12 @@ int main(int argc, char** argv) {
   DenseMatrix myB;
   DenseMatrix myC;
 
-  replGroup.initCustom(world.rank / config.repl_group_size, world.rank);
-  layer.initCustom(world.rank % config.repl_group_size, world.rank);
+  MpiGroup replGroup(world.rank / config.repl_group_size, world.rank);
+  MpiGroup layer(world.rank % config.repl_group_size, world.rank);
 
   initialize(myAInfo, myA, myCInfo, myC, config, world);
 
-  replicate(myA, myAInfo, replGroup);
+  replicate(myA, myAInfo, config, world, replGroup, layer);
 
   multiply(myAInfo, myCInfo, myA, myB, myC, config, world, layer);
 

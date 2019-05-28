@@ -1,6 +1,7 @@
 #pragma once
 
 #include <mpi.h>
+#include <functional>
 
 #include "config.h"
 #include "matrix.h"
@@ -8,14 +9,16 @@
 struct MpiGroup {
   int rank;
   int size;
+  int color;
   MPI_Comm comm;
 
-  void initWorld() {
+  MpiGroup() {
     comm = MPI_COMM_WORLD;
+    color = 0;
     init();
   }
 
-  void initCustom(int color, int worldRank) {
+  MpiGroup(int color, int worldRank) {
     MPI_Comm_split(MPI_COMM_WORLD, color, worldRank, &comm);
     init();
   }
@@ -32,7 +35,12 @@ void initialize(SparseMatrixInfo& myAInfo, SparseMatrix& myA,
                 const Config& config, const MpiGroup& world);
 
 void replicate(SparseMatrix& myA, SparseMatrixInfo& myAInfo,
-               const MpiGroup& replGroup);
+               const Config& config, const MpiGroup& world,
+               const MpiGroup& replGroup, const MpiGroup& layer);
+
+void shiftAandCompute(SparseMatrixInfo& myAInfo, SparseMatrix& myA,
+                      const MpiGroup& layer, int offset,
+                      std::function<void()> computation);
 
 void multiply(SparseMatrixInfo& myAInfo, SparseMatrixInfo& myCInfo,
               SparseMatrix& myA, DenseMatrix& myB, DenseMatrix& myC,

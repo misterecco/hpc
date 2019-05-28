@@ -210,7 +210,7 @@ vector<SparseMatrix> SparseMatrix::getRowDistribution(int numProcesses) const {
     auto& frag = dist[p];
 
     for (int row = startRow; row < endRow; row++) {
-      for (int i = row_se[row]; i < row_se[row+1]; i++) {
+      for (int i = row_se[row]; i < row_se[row + 1]; i++) {
         frag.values.push_back(values[i]);
         frag.col_indx.push_back(col_indx[i]);
       }
@@ -340,7 +340,7 @@ void DenseMatrix::print() const {
 }
 
 void DenseMatrix::print(int actualRows) const {
-  cout << rows << " " << cols << endl;
+  cout << actualRows << " " << actualRows << endl;
   for (int row = 0; row < actualRows; row++) {
     for (int col = 0; col < actualRows; col++) {
       cout << values[col * rows + row] << " ";

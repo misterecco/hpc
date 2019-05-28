@@ -3,7 +3,8 @@
 #include "matrixmul.h"
 
 void replicate(SparseMatrix& myA, SparseMatrixInfo& myAInfo,
-               const MpiGroup& replGroup) {
+               const Config& config, const MpiGroup& world,
+               const MpiGroup& replGroup, const MpiGroup& layer) {
   SparseMatrix myOrigA = myA;
 
   for (int i = 0; i < replGroup.size; i++) {
@@ -59,4 +60,17 @@ void replicate(SparseMatrix& myA, SparseMatrixInfo& myAInfo,
   }
 
   myAInfo.update(myA);
+
+  myA.print();
+
+  if (!config.use_inner)
+    return;
+
+  int c = config.repl_group_size;
+  int q = world.size / (c * c);
+  int offset = layer.color * q;
+
+  shiftAandCompute(myAInfo, myA, layer, offset, []() {});
+
+  myA.print();
 }

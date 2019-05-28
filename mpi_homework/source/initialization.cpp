@@ -43,7 +43,7 @@ void initialize(SparseMatrixInfo& myAInfo, SparseMatrix& myA,
       frags = A.getColumnDistribution(world.size);
     }
 
-    for (const auto& frag: frags) {
+    for (const auto& frag : frags) {
       frag.print();
     }
     printf("========================\n");
