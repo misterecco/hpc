@@ -5,38 +5,14 @@
 
 #include "config.h"
 #include "matrix.h"
-
-struct MpiGroup {
-  int rank;
-  int size;
-  int color;
-  MPI_Comm comm;
-
-  MpiGroup() {
-    comm = MPI_COMM_WORLD;
-    color = 0;
-    init();
-  }
-
-  MpiGroup(int color, int worldRank) {
-    MPI_Comm_split(MPI_COMM_WORLD, color, worldRank, &comm);
-    this->color = color;
-    init();
-  }
-
- private:
-  void init() {
-    MPI_Comm_size(comm, &size);
-    MPI_Comm_rank(comm, &rank);
-  }
-};
+#include "mpigroup.h"
 
 void initialize(MatrixInfo& myAInfo, SparseMatrix& myA, MatrixInfo& myCInfo,
                 DenseMatrix& myC, const Config& config, const MpiGroup& world);
 
-void replicate(SparseMatrix& myA, MatrixInfo& myAInfo, const Config& config,
-               const MpiGroup& world, const MpiGroup& replGroup,
-               const MpiGroup& layer);
+void replicate(SparseMatrix& myA, MatrixInfo& myAInfo, DenseMatrix& myC,
+               MatrixInfo& myCInfo, const Config& config, const MpiGroup& world,
+               const MpiGroup& replGroup, const MpiGroup& layer);
 
 void shiftAandCompute(MatrixInfo& myAInfo, SparseMatrix& myA,
                       const MpiGroup& layer, int offset,
@@ -54,3 +30,27 @@ void gatherC(const MatrixInfo& myCInfo, DenseMatrix& myC,
 
 void countGe(const MatrixInfo& myCInfo, const DenseMatrix& myC, double g,
              const MpiGroup& world);
+
+template <typename T>
+void broadcastMatrix(T& myMat, MatrixInfo& myMatInfo,
+                     const MpiGroup& replGroup) {
+  T myInitMat = myMat;
+
+  for (int i = 0; i < replGroup.size; i++) {
+    if (replGroup.rank == i) {
+      MPI_Bcast(&myMatInfo, MatrixInfo::size, MPI_INT, i, replGroup.comm);
+
+      myInitMat.broadcast(replGroup, i);
+    } else {
+      MatrixInfo otherInfo;
+      MPI_Bcast(&otherInfo, MatrixInfo::size, MPI_INT, i, replGroup.comm);
+
+      T otherMatrix(otherInfo);
+      otherMatrix.broadcast(replGroup, i);
+
+      myMat.merge(otherMatrix);
+    }
+  }
+
+  myMatInfo = myMat.getInfo();
+}

@@ -8,6 +8,7 @@
 using std::cout;
 using std::endl;
 using std::ifstream;
+using std::max;
 using std::min;
 using std::string;
 using std::vector;
@@ -17,16 +18,9 @@ void MatrixInfo::print() const {
          actualRows, nnz, rank);
 }
 
-void MatrixInfo::update(SparseMatrix& mat) {
-  rows = mat.rows;
-  cols = mat.cols;
-  nnz = mat.nnz;
-  actualRows = mat.actualRows;
-  rank = mat.rank;
-}
-
 bool MatrixInfo::check() const {
-  return rows >= 0 && cols >= 0 && nnz >= 0 && actualRows >= 0 && rank >= 0;
+  return rows >= 0 && cols >= 0 && nnz >= 0 && actualRows >= 0 && rank >= 0 &&
+         firstCol >= 0;
 }
 
 SparseMatrix::SparseMatrix(const string& filePath) {
@@ -62,6 +56,24 @@ SparseMatrix::SparseMatrix(const string& filePath) {
   }
 }
 
+SparseMatrix::SparseMatrix(const MatrixInfo& matrixInfo) {
+  if (!matrixInfo.check()) {
+    exit(EXIT_FAILURE);
+  }
+
+  rows = matrixInfo.rows;
+  cols = matrixInfo.cols;
+  nnz = matrixInfo.nnz;
+  actualRows = matrixInfo.actualRows;
+  rank = matrixInfo.rank;
+
+  row_se.resize(rows + 1);
+  col_indx.resize(nnz);
+  values.resize(nnz);
+
+  compact();
+}
+
 sparse_matrix_t SparseMatrix::toMklSparse() {
   sparse_matrix_t mat;
   auto status = mkl_sparse_d_create_csr(&mat, SPARSE_INDEX_BASE_ZERO, rows,
@@ -91,6 +103,17 @@ void SparseMatrix::print() const {
     cout << col_indx[i] << " ";
   }
   cout << endl;
+}
+
+MatrixInfo SparseMatrix::getInfo() const {
+  return {
+      .rows = rows,
+      .cols = cols,
+      .nnz = nnz,
+      .actualRows = actualRows,
+      .rank = rank,
+      .firstCol = 0,
+  };
 }
 
 void SparseMatrix::addPadding(int numProcesses) {
@@ -269,29 +292,25 @@ void SparseMatrix::compact() {
   values.shrink_to_fit();
 }
 
-void SparseMatrix::reserveSpace(const MatrixInfo& matrixInfo) {
-  if (!matrixInfo.check()) {
-    exit(EXIT_FAILURE);
+void SparseMatrix::broadcast(const MpiGroup& replGroup, int sourceRank) {
+  MPI_Request requests[3];
+  MPI_Ibcast(row_se.data(), rows + 1, MPI_INT, sourceRank, replGroup.comm,
+             requests);
+  if (nnz > 0) {
+    MPI_Ibcast(col_indx.data(), nnz, MPI_INT, sourceRank, replGroup.comm,
+               requests + 1);
+    MPI_Ibcast(values.data(), nnz, MPI_DOUBLE, sourceRank, replGroup.comm,
+               requests + 2);
   }
-
-  rows = matrixInfo.rows;
-  cols = matrixInfo.cols;
-  nnz = matrixInfo.nnz;
-  actualRows = matrixInfo.actualRows;
-  rank = matrixInfo.rank;
-
-  row_se.resize(rows + 1);
-  col_indx.resize(nnz);
-  values.resize(nnz);
-
-  compact();
+  MPI_Waitall(nnz > 0 ? 3 : 1, requests, MPI_STATUSES_IGNORE);
 }
 
 DenseMatrix::DenseMatrix(const MatrixInfo& matrixInfo, int rank,
                          int numProcesses, int seed) {
   rows = matrixInfo.rows;
   cols = matrixInfo.cols / numProcesses;
-  this->rank = rank;
+  actualRows = matrixInfo.actualRows;
+  firstCol = rank * cols;
 
   values.resize(rows * cols);
 
@@ -313,7 +332,8 @@ DenseMatrix::DenseMatrix(const MatrixInfo& matrixInfo, int rank,
                          int numProcesses) {
   rows = matrixInfo.rows;
   cols = matrixInfo.cols / numProcesses;
-  this->rank = rank;
+  actualRows = matrixInfo.actualRows;
+  firstCol = rank * cols;
 
   values.resize(rows * cols);
   compact();
@@ -322,15 +342,20 @@ DenseMatrix::DenseMatrix(const MatrixInfo& matrixInfo, int rank,
 DenseMatrix::DenseMatrix(const MatrixInfo& matrixInfo) {
   rows = matrixInfo.rows;
   cols = matrixInfo.cols;
-  rank = 0;
+  actualRows = matrixInfo.actualRows;
+  firstCol = matrixInfo.firstCol;
 
   values.resize(rows * cols);
   compact();
 }
 
+void DenseMatrix::broadcast(const MpiGroup& replGroup, int sourceRank) {
+  MPI_Bcast(values.data(), rows * cols, MPI_DOUBLE, sourceRank, replGroup.comm);
+}
+
 void DenseMatrix::compact() { values.shrink_to_fit(); }
 
-void DenseMatrix::print() const {
+void DenseMatrix::printColMajor() const {
   for (int col = 0; col < cols; col++) {
     for (int row = 0; row < rows; row++) {
       cout << values[col * rows + row] << " ";
@@ -339,7 +364,7 @@ void DenseMatrix::print() const {
   }
 }
 
-void DenseMatrix::print(int actualRows) const {
+void DenseMatrix::print() const {
   cout << actualRows << " " << actualRows << endl;
   for (int row = 0; row < actualRows; row++) {
     for (int col = 0; col < actualRows; col++) {
@@ -349,15 +374,32 @@ void DenseMatrix::print(int actualRows) const {
   }
 }
 
+// TODO: optimize a bit?
 void DenseMatrix::merge(const DenseMatrix& other) {
-  if (other.rank > rank) {
+  int newFirstCol = min(firstCol, other.firstCol);
+  int newLastCol = max(firstCol + cols, other.firstCol + other.cols);
+  int newCols = newLastCol - newFirstCol;
+
+  vector<double> newValues(rows * newCols);
+
+  for (int col = firstCol; col < firstCol + cols; col++) {
+    for (int row = 0; rows < actualRows; row++) {
+      newValues[(col - newFirstCol) * rows + row] =
+          values[(col - firstCol) * rows + row];
+    }
+  }
+
+  for (int col = other.firstCol; col < other.firstCol + other.cols; col++) {
+    for (int row = 0; rows < actualRows; row++) {
+      newValues[(col - newFirstCol) * rows + row] =
+          values[(col - other.firstCol) * rows + row];
+    }
   }
 }
 
 int DenseMatrix::countGreaterOrEqual(double g, int actualRows) const {
   int count = 0;
-  int firstCol = cols * rank;
-  int lastCol = std::min(cols * (rank + 1), actualRows);
+  int lastCol = std::min(firstCol + cols, actualRows);
 
   for (int actualCol = firstCol; actualCol < lastCol; actualCol++) {
     int col = actualCol - firstCol;

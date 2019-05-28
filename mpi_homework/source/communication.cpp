@@ -26,7 +26,7 @@ void shiftAandCompute(MatrixInfo& myAInfo, SparseMatrix& myA,
       MPI_Recv(&nextAInfo, MatrixInfo::size, MPI_INT, recvFromLayerRank, 0,
                layer.comm, MPI_STATUS_IGNORE);
     }
-    nextA.reserveSpace(nextAInfo);
+    nextA = SparseMatrix(nextAInfo);
   }
 
   MPI_Request sendRequests[3];

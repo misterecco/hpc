@@ -5,13 +5,14 @@
 void gatherC(const MatrixInfo& myCInfo, DenseMatrix& myC,
              const MpiGroup& world) {
   if (world.rank == 0) {
+    myCInfo.print();
     DenseMatrix C(myCInfo);
 
     MPI_Gather(myC.values.data(), myC.rows * myC.cols, MPI_DOUBLE,
                C.values.data(), myC.rows * myC.cols, MPI_DOUBLE, 0,
                MPI_COMM_WORLD);
 
-    C.print(myCInfo.actualRows);
+    C.print();
   } else {
     MPI_Gather(myC.values.data(), myC.rows * myC.cols, MPI_DOUBLE, nullptr,
                myC.rows * myC.cols, MPI_DOUBLE, 0, MPI_COMM_WORLD);

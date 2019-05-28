@@ -37,7 +37,7 @@ int main(int argc, char** argv) {
 
   initialize(myAInfo, myA, myCInfo, myC, config, world);
 
-  replicate(myA, myAInfo, config, world, replGroup, layer);
+  replicate(myA, myAInfo, myC, myCInfo, config, world, replGroup, layer);
 
   multiply(myAInfo, myCInfo, myA, myB, myC, config, world, layer);
 

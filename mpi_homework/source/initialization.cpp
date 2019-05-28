@@ -31,7 +31,7 @@ void initialize(MatrixInfo& myAInfo, SparseMatrix& myA, MatrixInfo& myCInfo,
       MPI_Iscatter(info.data(), MatrixInfo::size, MPI_INT, &myAInfo,
                    MatrixInfo::size, MPI_INT, 0, MPI_COMM_WORLD, &request);
 
-      myA.reserveSpace(myAInfo);
+      myA = SparseMatrix(myAInfo);
     }
 
     vector<SparseMatrix> frags;
@@ -98,7 +98,7 @@ void initialize(MatrixInfo& myAInfo, SparseMatrix& myA, MatrixInfo& myCInfo,
                    MatrixInfo::size, MPI_INT, 0, MPI_COMM_WORLD, &request);
       MPI_Wait(&request, MPI_STATUS_IGNORE);
 
-      myA.reserveSpace(myAInfo);
+      myA = SparseMatrix(myAInfo);
     }
 
     {

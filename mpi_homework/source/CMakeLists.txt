@@ -38,7 +38,7 @@ link_directories(${MPI_CXX_LIBRARIES})
 
 # DEFINE PROJECT FILES
 
-set(SOURCE_FILES ${SOURCE_FILES} errors.h utils.h matrixmul.h)
+set(SOURCE_FILES ${SOURCE_FILES} errors.h utils.h matrixmul.h mpigroup.h)
 
 add_library(densematgen densematgen.cpp densematgen.h)
 add_library(matrix matrix.cpp matrix.h)

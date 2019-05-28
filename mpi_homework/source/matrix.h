@@ -4,21 +4,20 @@
 #include <string>
 #include <vector>
 
-struct SparseMatrix;
+#include "mpigroup.h"
 
 struct MatrixInfo {
   int rows = -1;
   int cols = -1;
   int nnz = -1;
   int actualRows = -1;
-  int rank = -1;
+  int rank = 0;
+  int firstCol = 0;
 
   // IMPORTANT: keep in sync with actual fields count
-  static constexpr int size = 5;
+  static constexpr int size = 6;
 
   void print() const;
-
-  void update(SparseMatrix& mat);
 
   bool check() const;
 };
@@ -36,12 +35,14 @@ struct SparseMatrix {
 
   SparseMatrix() = default;
   SparseMatrix(const std::string& filePath);
+  SparseMatrix(const MatrixInfo& matrixInfo);
+
+  MatrixInfo getInfo() const;
 
   sparse_matrix_t toMklSparse();
 
   void addPadding(int numProcesses);
   void compact();
-  void reserveSpace(const MatrixInfo& matrixInfo);
 
   std::vector<MatrixInfo> getColumnDistributionInfo(int numProcesses) const;
   std::vector<SparseMatrix> getColumnDistribution(int numProcesses) const;
@@ -49,13 +50,16 @@ struct SparseMatrix {
   std::vector<SparseMatrix> getRowDistribution(int numProcesses) const;
   void merge(const SparseMatrix& other);
 
+  void broadcast(const MpiGroup& replGroup, int sourceRank);
+
   void print() const;
 };
 
 struct DenseMatrix {
   int rows;
   int cols;
-  int rank;
+  int actualRows;
+  int firstCol;
 
   std::vector<double> values;
 
@@ -66,8 +70,10 @@ struct DenseMatrix {
   DenseMatrix(const MatrixInfo& matrixInfo);
 
   void compact();
+  void printColMajor() const;
   void print() const;
-  void print(int actualRows) const;
+
+  void broadcast(const MpiGroup& replGroup, int sourceRank);
 
   void merge(const DenseMatrix& other);
   int countGreaterOrEqual(double g, int actualRows) const;
