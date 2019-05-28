@@ -6,7 +6,7 @@
 
 struct SparseMatrix;
 
-struct SparseMatrixInfo {
+struct MatrixInfo {
   int rows = -1;
   int cols = -1;
   int nnz = -1;
@@ -41,12 +41,11 @@ struct SparseMatrix {
 
   void addPadding(int numProcesses);
   void compact();
-  void reserveSpace(const SparseMatrixInfo& matrixInfo);
+  void reserveSpace(const MatrixInfo& matrixInfo);
 
-  std::vector<SparseMatrixInfo> getColumnDistributionInfo(
-      int numProcesses) const;
+  std::vector<MatrixInfo> getColumnDistributionInfo(int numProcesses) const;
   std::vector<SparseMatrix> getColumnDistribution(int numProcesses) const;
-  std::vector<SparseMatrixInfo> getRowDistributionInfo(int numProcesses) const;
+  std::vector<MatrixInfo> getRowDistributionInfo(int numProcesses) const;
   std::vector<SparseMatrix> getRowDistribution(int numProcesses) const;
   void merge(const SparseMatrix& other);
 
@@ -61,13 +60,15 @@ struct DenseMatrix {
   std::vector<double> values;
 
   DenseMatrix() = default;
-  DenseMatrix(const SparseMatrixInfo& matrixInfo, int rank, int numProcesses,
+  DenseMatrix(const MatrixInfo& matrixInfo, int rank, int numProcesses,
               int seed);
-  DenseMatrix(const SparseMatrixInfo& matrixInfo, int rank, int numProcesses);
-  DenseMatrix(const SparseMatrixInfo& matrixInfo);
+  DenseMatrix(const MatrixInfo& matrixInfo, int rank, int numProcesses);
+  DenseMatrix(const MatrixInfo& matrixInfo);
 
   void compact();
   void print() const;
   void print(int actualRows) const;
+
+  void merge(const DenseMatrix& other);
   int countGreaterOrEqual(double g, int actualRows) const;
 };

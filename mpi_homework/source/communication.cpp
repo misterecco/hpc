@@ -4,10 +4,10 @@
 
 using std::function;
 
-void shiftAandCompute(SparseMatrixInfo& myAInfo, SparseMatrix& myA,
+void shiftAandCompute(MatrixInfo& myAInfo, SparseMatrix& myA,
                       const MpiGroup& layer, int offset,
                       function<void()> computation) {
-  SparseMatrixInfo nextAInfo;
+  MatrixInfo nextAInfo;
   SparseMatrix nextA;
   int sendToLayerRank = (layer.rank + offset) % layer.size;
   int recvFromLayerRank = (layer.rank >= offset)
@@ -15,17 +15,16 @@ void shiftAandCompute(SparseMatrixInfo& myAInfo, SparseMatrix& myA,
                               : (layer.rank + layer.size) - offset;
 
   if (layer.size > 1 && offset > 0) {
-    // TODO: extract info function
     if (layer.rank == 0) {
-      MPI_Recv(&nextAInfo, SparseMatrixInfo::size, MPI_INT, recvFromLayerRank,
-               0, layer.comm, MPI_STATUS_IGNORE);
-      MPI_Send(&myAInfo, SparseMatrixInfo::size, MPI_INT, sendToLayerRank, 0,
+      MPI_Recv(&nextAInfo, MatrixInfo::size, MPI_INT, recvFromLayerRank, 0,
+               layer.comm, MPI_STATUS_IGNORE);
+      MPI_Send(&myAInfo, MatrixInfo::size, MPI_INT, sendToLayerRank, 0,
                layer.comm);
     } else {
-      MPI_Send(&myAInfo, SparseMatrixInfo::size, MPI_INT, sendToLayerRank, 0,
+      MPI_Send(&myAInfo, MatrixInfo::size, MPI_INT, sendToLayerRank, 0,
                layer.comm);
-      MPI_Recv(&nextAInfo, SparseMatrixInfo::size, MPI_INT, recvFromLayerRank,
-               0, layer.comm, MPI_STATUS_IGNORE);
+      MPI_Recv(&nextAInfo, MatrixInfo::size, MPI_INT, recvFromLayerRank, 0,
+               layer.comm, MPI_STATUS_IGNORE);
     }
     nextA.reserveSpace(nextAInfo);
   }

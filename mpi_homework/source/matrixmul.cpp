@@ -26,8 +26,8 @@ int main(int argc, char** argv) {
     exit(EXIT_FAILURE);
   }
 
-  SparseMatrixInfo myAInfo;
-  SparseMatrixInfo myCInfo;
+  MatrixInfo myAInfo;
+  MatrixInfo myCInfo;
   SparseMatrix myA;
   DenseMatrix myB;
   DenseMatrix myC;

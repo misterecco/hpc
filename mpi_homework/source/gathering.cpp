@@ -1,6 +1,8 @@
 #include "matrixmul.h"
 
-void gatherC(const SparseMatrixInfo& myCInfo, DenseMatrix& myC,
+// TODO: for InnerABC first reduce inside repl groups, then send to coordinator
+
+void gatherC(const MatrixInfo& myCInfo, DenseMatrix& myC,
              const MpiGroup& world) {
   if (world.rank == 0) {
     DenseMatrix C(myCInfo);
@@ -16,7 +18,7 @@ void gatherC(const SparseMatrixInfo& myCInfo, DenseMatrix& myC,
   }
 }
 
-void countGe(const SparseMatrixInfo& myCInfo, const DenseMatrix& myC, double g,
+void countGe(const MatrixInfo& myCInfo, const DenseMatrix& myC, double g,
              const MpiGroup& world) {
   int myCount = myC.countGreaterOrEqual(g, myCInfo.actualRows);
   int totalCount = 0;

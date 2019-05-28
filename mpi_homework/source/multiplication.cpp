@@ -35,15 +35,17 @@ void multiplyLocal(SparseMatrix& A, const DenseMatrix& B, DenseMatrix& C,
   }
 }
 
-void multiply(SparseMatrixInfo& myAInfo, SparseMatrixInfo& myCInfo,
-              SparseMatrix& myA, DenseMatrix& myB, DenseMatrix& myC,
-              const Config& config, const MpiGroup& world,
-              const MpiGroup& layer) {
+void multiply(MatrixInfo& myAInfo, MatrixInfo& myCInfo, SparseMatrix& myA,
+              DenseMatrix& myB, DenseMatrix& myC, const Config& config,
+              const MpiGroup& world, const MpiGroup& layer) {
   for (int e = 0; e < config.exponent; e++) {
     myB = myC;
     myC = DenseMatrix(myCInfo, world.rank, world.size);
 
-    for (int i = 0; i < layer.size; i++) {
+    int rounds =
+        config.use_inner ? layer.size / config.repl_group_size : layer.size;
+
+    for (int i = 0; i < rounds; i++) {
       shiftAandCompute(myAInfo, myA, layer, 1,
                        [&]() { multiplyLocal(myA, myB, myC, config.use_mkl); });
     }

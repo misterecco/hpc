@@ -5,16 +5,15 @@
 
 using std::vector;
 
-void initialize(SparseMatrixInfo& myAInfo, SparseMatrix& myA,
-                SparseMatrixInfo& myCInfo, DenseMatrix& myC,
-                const Config& config, const MpiGroup& world) {
+void initialize(MatrixInfo& myAInfo, SparseMatrix& myA, MatrixInfo& myCInfo,
+                DenseMatrix& myC, const Config& config, const MpiGroup& world) {
   if (world.rank == 0) {
     config.print();
 
     SparseMatrix A(config.sparse_matrix_file);
     A.addPadding(world.size);
 
-    vector<SparseMatrixInfo> info;
+    vector<MatrixInfo> info;
     if (config.use_inner) {
       info = A.getRowDistributionInfo(world.size);
     } else {
@@ -29,9 +28,8 @@ void initialize(SparseMatrixInfo& myAInfo, SparseMatrix& myA,
 
     {
       MPI_Request request;
-      MPI_Iscatter(info.data(), SparseMatrixInfo::size, MPI_INT, &myAInfo,
-                   SparseMatrixInfo::size, MPI_INT, 0, MPI_COMM_WORLD,
-                   &request);
+      MPI_Iscatter(info.data(), MatrixInfo::size, MPI_INT, &myAInfo,
+                   MatrixInfo::size, MPI_INT, 0, MPI_COMM_WORLD, &request);
 
       myA.reserveSpace(myAInfo);
     }
@@ -96,9 +94,8 @@ void initialize(SparseMatrixInfo& myAInfo, SparseMatrix& myA,
   } else {
     {
       MPI_Request request;
-      MPI_Iscatter(nullptr, SparseMatrixInfo::size, MPI_INT, &myAInfo,
-                   SparseMatrixInfo::size, MPI_INT, 0, MPI_COMM_WORLD,
-                   &request);
+      MPI_Iscatter(nullptr, MatrixInfo::size, MPI_INT, &myAInfo,
+                   MatrixInfo::size, MPI_INT, 0, MPI_COMM_WORLD, &request);
       MPI_Wait(&request, MPI_STATUS_IGNORE);
 
       myA.reserveSpace(myAInfo);

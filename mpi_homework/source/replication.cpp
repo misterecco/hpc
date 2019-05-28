@@ -2,16 +2,16 @@
 
 #include "matrixmul.h"
 
-void replicate(SparseMatrix& myA, SparseMatrixInfo& myAInfo,
-               const Config& config, const MpiGroup& world,
-               const MpiGroup& replGroup, const MpiGroup& layer) {
+void replicate(SparseMatrix& myA, MatrixInfo& myAInfo, const Config& config,
+               const MpiGroup& world, const MpiGroup& replGroup,
+               const MpiGroup& layer) {
   SparseMatrix myOrigA = myA;
 
   for (int i = 0; i < replGroup.size; i++) {
     if (replGroup.rank == i) {
       {
         MPI_Request request;
-        MPI_Ibcast(&myAInfo, SparseMatrixInfo::size, MPI_INT, i, replGroup.comm,
+        MPI_Ibcast(&myAInfo, MatrixInfo::size, MPI_INT, i, replGroup.comm,
                    &request);
         MPI_Wait(&request, MPI_STATUS_IGNORE);
       }
@@ -29,13 +29,13 @@ void replicate(SparseMatrix& myA, SparseMatrixInfo& myAInfo,
         MPI_Waitall(myOrigA.nnz > 0 ? 3 : 1, requests, MPI_STATUSES_IGNORE);
       }
     } else {
-      SparseMatrixInfo otherInfo;
+      MatrixInfo otherInfo;
       SparseMatrix otherMatrix;
 
       {
         MPI_Request request;
-        MPI_Ibcast(&otherInfo, SparseMatrixInfo::size, MPI_INT, i,
-                   replGroup.comm, &request);
+        MPI_Ibcast(&otherInfo, MatrixInfo::size, MPI_INT, i, replGroup.comm,
+                   &request);
         MPI_Wait(&request, MPI_STATUS_IGNORE);
         // otherInfo.print();
       }
@@ -70,7 +70,9 @@ void replicate(SparseMatrix& myA, SparseMatrixInfo& myAInfo,
   int q = world.size / (c * c);
   int offset = layer.color * q;
 
-  shiftAandCompute(myAInfo, myA, layer, offset, []() {});
+  shiftAandCompute(myAInfo, myA, layer, offset, [&]() {});
 
   myA.print();
+
+  // TODO: replicate C
 }
