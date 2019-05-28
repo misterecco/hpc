@@ -1,7 +1,6 @@
 #include "matrixmul.h"
 
 // TODO: for InnerABC first reduce inside repl groups, then send to coordinator
-
 void gatherC(const MatrixInfo& myCInfo, DenseMatrix& myC,
              const MpiGroup& world) {
   if (world.rank == 0) {

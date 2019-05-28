@@ -66,8 +66,9 @@ struct DenseMatrix {
   DenseMatrix() = default;
   DenseMatrix(const MatrixInfo& matrixInfo, int rank, int numProcesses,
               int seed);
-  DenseMatrix(const MatrixInfo& matrixInfo, int rank, int numProcesses);
   DenseMatrix(const MatrixInfo& matrixInfo);
+
+  MatrixInfo getInfo() const;
 
   void compact();
   void printColMajor() const;

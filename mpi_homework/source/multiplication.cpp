@@ -1,6 +1,7 @@
 #include <mkl.h>
 
 #include "matrixmul.h"
+#include "utils.h"
 
 void multiplyLocal(SparseMatrix& A, const DenseMatrix& B, DenseMatrix& C,
                    bool use_mkl) {
@@ -40,14 +41,19 @@ void multiply(MatrixInfo& myAInfo, MatrixInfo& myCInfo, SparseMatrix& myA,
               const MpiGroup& world, const MpiGroup& layer) {
   for (int e = 0; e < config.exponent; e++) {
     myB = myC;
-    myC = DenseMatrix(myCInfo, world.rank, world.size);
+    myC = DenseMatrix(myCInfo);
 
     int rounds =
         config.use_inner ? layer.size / config.repl_group_size : layer.size;
 
+    // TODO: optimize last shift
     for (int i = 0; i < rounds; i++) {
       shiftAandCompute(myAInfo, myA, layer, 1,
                        [&]() { multiplyLocal(myA, myB, myC, config.use_mkl); });
     }
   }
+
+  debugPrint(world, [&]() {
+    myC.printColMajor();
+  });
 }

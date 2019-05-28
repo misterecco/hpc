@@ -42,11 +42,11 @@ int main(int argc, char** argv) {
   multiply(myAInfo, myCInfo, myA, myB, myC, config, world, layer);
 
   if (config.verbose) {
-    gatherC(myCInfo, myC, world);
+    gatherC(myAInfo, myC, world);
   }
 
   if (config.print_ge) {
-    countGe(myCInfo, myC, config.ge_value, world);
+    countGe(myAInfo, myC, config.ge_value, world);
   }
 
   MPI_Finalize();

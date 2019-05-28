@@ -20,12 +20,6 @@ void initialize(MatrixInfo& myAInfo, SparseMatrix& myA, MatrixInfo& myCInfo,
       info = A.getColumnDistributionInfo(world.size);
     }
 
-    A.print();
-
-    for (const auto& i : info) {
-      i.print();
-    }
-
     {
       MPI_Request request;
       MPI_Iscatter(info.data(), MatrixInfo::size, MPI_INT, &myAInfo,
@@ -40,11 +34,6 @@ void initialize(MatrixInfo& myAInfo, SparseMatrix& myA, MatrixInfo& myCInfo,
     } else {
       frags = A.getColumnDistribution(world.size);
     }
-
-    for (const auto& frag : frags) {
-      frag.print();
-    }
-    printf("========================\n");
 
     {
       vector<int> allRowSe;
@@ -124,7 +113,5 @@ void initialize(MatrixInfo& myAInfo, SparseMatrix& myA, MatrixInfo& myCInfo,
 
   MPI_Barrier(MPI_COMM_WORLD);
 
-  myA.print();
-
-  myCInfo = myAInfo;
+  myCInfo = myC.getInfo();
 }

@@ -14,8 +14,8 @@ using std::string;
 using std::vector;
 
 void MatrixInfo::print() const {
-  printf("rows: %d cols: %d actualRows: %d nnz: %d rank: %d\n", rows, cols,
-         actualRows, nnz, rank);
+  printf("rows: %d cols: %d actualRows: %d nnz: %d rank: %d firstCol: %d\n",
+         rows, cols, actualRows, nnz, rank, firstCol);
 }
 
 bool MatrixInfo::check() const {
@@ -328,17 +328,6 @@ DenseMatrix::DenseMatrix(const MatrixInfo& matrixInfo, int rank,
   compact();
 }
 
-DenseMatrix::DenseMatrix(const MatrixInfo& matrixInfo, int rank,
-                         int numProcesses) {
-  rows = matrixInfo.rows;
-  cols = matrixInfo.cols / numProcesses;
-  actualRows = matrixInfo.actualRows;
-  firstCol = rank * cols;
-
-  values.resize(rows * cols);
-  compact();
-}
-
 DenseMatrix::DenseMatrix(const MatrixInfo& matrixInfo) {
   rows = matrixInfo.rows;
   cols = matrixInfo.cols;
@@ -349,6 +338,17 @@ DenseMatrix::DenseMatrix(const MatrixInfo& matrixInfo) {
   compact();
 }
 
+MatrixInfo DenseMatrix::getInfo() const {
+  return {
+      .rows = rows,
+      .cols = cols,
+      .nnz = rows * cols,
+      .actualRows = actualRows,
+      .rank = 0,
+      .firstCol = firstCol,
+  };
+}
+
 void DenseMatrix::broadcast(const MpiGroup& replGroup, int sourceRank) {
   MPI_Bcast(values.data(), rows * cols, MPI_DOUBLE, sourceRank, replGroup.comm);
 }
@@ -356,12 +356,16 @@ void DenseMatrix::broadcast(const MpiGroup& replGroup, int sourceRank) {
 void DenseMatrix::compact() { values.shrink_to_fit(); }
 
 void DenseMatrix::printColMajor() const {
+  printf("-------------------------------------\n");
+  printf("rows: %d cols: %d actualRows: %d firstCol: %d\n",
+         rows, cols, actualRows, firstCol);
   for (int col = 0; col < cols; col++) {
     for (int row = 0; row < rows; row++) {
       cout << values[col * rows + row] << " ";
     }
     cout << endl;
   }
+  printf("-------------------------------------\n");
 }
 
 void DenseMatrix::print() const {
@@ -383,18 +387,22 @@ void DenseMatrix::merge(const DenseMatrix& other) {
   vector<double> newValues(rows * newCols);
 
   for (int col = firstCol; col < firstCol + cols; col++) {
-    for (int row = 0; rows < actualRows; row++) {
+    for (int row = 0; row < actualRows; row++) {
       newValues[(col - newFirstCol) * rows + row] =
           values[(col - firstCol) * rows + row];
     }
   }
 
   for (int col = other.firstCol; col < other.firstCol + other.cols; col++) {
-    for (int row = 0; rows < actualRows; row++) {
-      newValues[(col - newFirstCol) * rows + row] =
-          values[(col - other.firstCol) * rows + row];
+    for (int row = 0; row < actualRows; row++) {
+      newValues[(col - newFirstCol) * rows + row] +=
+          other.values[(col - other.firstCol) * rows + row];
     }
   }
+
+  cols = newCols;
+  firstCol = newFirstCol;
+  values = newValues;
 }
 
 int DenseMatrix::countGreaterOrEqual(double g, int actualRows) const {
