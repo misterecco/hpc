@@ -5,8 +5,9 @@
 
 using std::vector;
 
-void initialize(MatrixInfo& myAInfo, SparseMatrix& myA, MatrixInfo& myCInfo,
-                DenseMatrix& myC, const Config& config, const MpiGroup& world) {
+void initialize(SparseMatrix& myA, DenseMatrix& myC, const Config& config,
+                const MpiGroup& world) {
+  MatrixInfo myAInfo;
   if (world.rank == 0) {
     config.print(stderr);
 
@@ -112,6 +113,4 @@ void initialize(MatrixInfo& myAInfo, SparseMatrix& myA, MatrixInfo& myCInfo,
   myC = DenseMatrix(myAInfo, world.rank, world.size, config.seed);
 
   MPI_Barrier(MPI_COMM_WORLD);
-
-  myCInfo = myC.getInfo();
 }

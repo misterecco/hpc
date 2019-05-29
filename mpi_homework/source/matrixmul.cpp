@@ -26,8 +26,6 @@ int main(int argc, char** argv) {
     exit(EXIT_FAILURE);
   }
 
-  MatrixInfo myAInfo;
-  MatrixInfo myCInfo;
   SparseMatrix myA;
   DenseMatrix myB;
   DenseMatrix myC;
@@ -35,22 +33,21 @@ int main(int argc, char** argv) {
   MpiGroup replGroup(world.rank / config.repl_group_size, world.rank);
   MpiGroup layer(world.rank % config.repl_group_size, world.rank);
 
-  initialize(myAInfo, myA, myCInfo, myC, config, world);
+  initialize(myA, myC, config, world);
 
-  replicate(myA, myAInfo, myC, myCInfo, config, world, replGroup, layer);
+  MatrixInfo cInfo = myA.getInfo();
+  bool isCReducedToZeroLayer = false;
 
-  multiply(myAInfo, myCInfo, myA, myB, myC, config, world, layer);
+  replicate(myA, myC, config, world, replGroup, layer);
 
-  bool isReducedToZeroLayer = false;
+  multiply(myA, myB, myC, config, layer);
 
   if (config.verbose) {
-    gatherC(myAInfo, myC, world, replGroup, layer, config,
-            isReducedToZeroLayer);
+    gatherC(cInfo, myC, world, replGroup, layer, config, isCReducedToZeroLayer);
   }
 
   if (config.print_ge) {
-    countGe(myAInfo, myC, world, replGroup, layer, config,
-            isReducedToZeroLayer);
+    countGe(myC, world, replGroup, layer, config, isCReducedToZeroLayer);
   }
 
   MPI_Finalize();

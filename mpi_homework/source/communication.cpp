@@ -4,10 +4,10 @@
 
 using std::function;
 
-void shiftAandCompute(MatrixInfo& myAInfo, SparseMatrix& myA,
-                      const MpiGroup& layer, int offset,
+void shiftAandCompute(SparseMatrix& myA, const MpiGroup& layer, int offset,
                       function<void()> computation) {
   MatrixInfo nextAInfo;
+  MatrixInfo myAInfo = myA.getInfo();
   SparseMatrix nextA;
   int sendToLayerRank = (layer.rank + offset) % layer.size;
   int recvFromLayerRank = (layer.rank >= offset)
@@ -59,6 +59,5 @@ void shiftAandCompute(MatrixInfo& myAInfo, SparseMatrix& myA,
     MPI_Waitall(nextAInfo.nnz > 0 ? 3 : 1, recvRequests, MPI_STATUSES_IGNORE);
 
     myA = nextA;
-    myAInfo = nextAInfo;
   }
 }

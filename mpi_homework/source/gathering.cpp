@@ -30,7 +30,7 @@ int reduceCountGe(const DenseMatrix& myC, double g, const MpiGroup& group) {
 
 void gatherC(const MatrixInfo& cInfo, DenseMatrix& myC, const MpiGroup& world,
              const MpiGroup& replGroup, const MpiGroup& layer,
-             const Config& config, bool& isReducedToZeroLayer) {
+             const Config& config, bool& isCReducedToZeroLayer) {
   if (config.use_inner) {
     if (replGroup.rank == 0) {
       DenseMatrix myInitC = myC;
@@ -45,19 +45,17 @@ void gatherC(const MatrixInfo& cInfo, DenseMatrix& myC, const MpiGroup& world,
       gatherAndPrintMatrix(myC, cInfo, layer);
     }
 
-    isReducedToZeroLayer = true;
+    isCReducedToZeroLayer = true;
   } else {
     gatherAndPrintMatrix(myC, cInfo, world);
   }
 }
 
-// TODO: for InnerABC first reduce inside repl groups, then send to coordinator
-void countGe(const MatrixInfo& myCInfo, const DenseMatrix& myC,
-             const MpiGroup& world, const MpiGroup& replGroup,
-             const MpiGroup& layer, const Config& config,
-             bool isReducedToZeroLayer) {
+void countGe(const DenseMatrix& myC, const MpiGroup& world,
+             const MpiGroup& replGroup, const MpiGroup& layer,
+             const Config& config, bool isCReducedToZeroLayer) {
   if (config.use_inner) {
-    if (isReducedToZeroLayer) {
+    if (isCReducedToZeroLayer) {
       if (layer.color == 0) {
         int totalCount = reduceCountGe(myC, config.ge_value, layer);
 

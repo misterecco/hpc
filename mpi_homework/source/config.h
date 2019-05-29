@@ -47,7 +47,7 @@ struct Config {
   void print(FILE* out) const {
     fprintf(out, "Config: \n");
     fprintf(out, "-f %s -s %i -c %d -e %d ", sparse_matrix_file.c_str(), seed,
-           repl_group_size, exponent);
+            repl_group_size, exponent);
     if (print_ge) {
       fprintf(out, "-g %f ", ge_value);
     }

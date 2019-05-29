@@ -378,7 +378,6 @@ void DenseMatrix::print() const {
   }
 }
 
-// TODO: optimize a bit?
 void DenseMatrix::merge(const DenseMatrix& other) {
   int newFirstCol = min(firstCol, other.firstCol);
   int newLastCol = max(firstCol + cols, other.firstCol + other.cols);
