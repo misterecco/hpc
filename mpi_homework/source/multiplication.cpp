@@ -52,8 +52,4 @@ void multiply(MatrixInfo& myAInfo, MatrixInfo& myCInfo, SparseMatrix& myA,
                        [&]() { multiplyLocal(myA, myB, myC, config.use_mkl); });
     }
   }
-
-  debugPrint(world, [&]() {
-    myC.printColMajor();
-  });
 }

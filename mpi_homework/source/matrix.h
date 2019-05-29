@@ -77,5 +77,5 @@ struct DenseMatrix {
   void broadcast(const MpiGroup& replGroup, int sourceRank);
 
   void merge(const DenseMatrix& other);
-  int countGreaterOrEqual(double g, int actualRows) const;
+  int countGreaterOrEqual(double g) const;
 };

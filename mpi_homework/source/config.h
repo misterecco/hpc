@@ -44,22 +44,22 @@ struct Config {
     return sparse_matrix_file.size() > 0 && exponent > 0 && repl_group_size > 0;
   }
 
-  void print() const {
-    printf("Config: \n");
-    printf("-f %s -s %i -c %d -e %d ", sparse_matrix_file.c_str(), seed,
+  void print(FILE* out) const {
+    fprintf(out, "Config: \n");
+    fprintf(out, "-f %s -s %i -c %d -e %d ", sparse_matrix_file.c_str(), seed,
            repl_group_size, exponent);
     if (print_ge) {
-      printf("-g %f ", ge_value);
+      fprintf(out, "-g %f ", ge_value);
     }
     if (verbose) {
-      printf("-v ");
+      fprintf(out, "-v ");
     }
     if (use_inner) {
-      printf("-i ");
+      fprintf(out, "-i ");
     }
     if (use_mkl) {
-      printf("-m ");
+      fprintf(out, "-m ");
     }
-    printf("\n");
+    fprintf(out, "\n");
   }
 };

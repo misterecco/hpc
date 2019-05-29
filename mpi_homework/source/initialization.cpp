@@ -8,7 +8,7 @@ using std::vector;
 void initialize(MatrixInfo& myAInfo, SparseMatrix& myA, MatrixInfo& myCInfo,
                 DenseMatrix& myC, const Config& config, const MpiGroup& world) {
   if (world.rank == 0) {
-    config.print();
+    config.print(stderr);
 
     SparseMatrix A(config.sparse_matrix_file);
     A.addPadding(world.size);

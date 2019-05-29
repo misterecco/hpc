@@ -25,11 +25,14 @@ void multiply(MatrixInfo& myAInfo, MatrixInfo& myCInfo, SparseMatrix& myA,
 void multiplyLocal(SparseMatrix& A, const DenseMatrix& B, DenseMatrix& C,
                    bool use_mkl);
 
-void gatherC(const MatrixInfo& myCInfo, DenseMatrix& myC,
-             const MpiGroup& world);
+void gatherC(const MatrixInfo& cInfo, DenseMatrix& myC, const MpiGroup& world,
+             const MpiGroup& replGroup, const MpiGroup& layer,
+             const Config& config, bool& isReducedToZeroLayer);
 
-void countGe(const MatrixInfo& myCInfo, const DenseMatrix& myC, double g,
-             const MpiGroup& world);
+void countGe(const MatrixInfo& myCInfo, const DenseMatrix& myC,
+             const MpiGroup& world, const MpiGroup& replGroup,
+             const MpiGroup& layer, const Config& config,
+             bool isReducedToZeroLayer);
 
 template <typename T>
 void broadcastMatrix(T& myMat, MatrixInfo& myMatInfo,

@@ -357,8 +357,8 @@ void DenseMatrix::compact() { values.shrink_to_fit(); }
 
 void DenseMatrix::printColMajor() const {
   printf("-------------------------------------\n");
-  printf("rows: %d cols: %d actualRows: %d firstCol: %d\n",
-         rows, cols, actualRows, firstCol);
+  printf("rows: %d cols: %d actualRows: %d firstCol: %d\n", rows, cols,
+         actualRows, firstCol);
   for (int col = 0; col < cols; col++) {
     for (int row = 0; row < rows; row++) {
       cout << values[col * rows + row] << " ";
@@ -405,7 +405,7 @@ void DenseMatrix::merge(const DenseMatrix& other) {
   values = newValues;
 }
 
-int DenseMatrix::countGreaterOrEqual(double g, int actualRows) const {
+int DenseMatrix::countGreaterOrEqual(double g) const {
   int count = 0;
   int lastCol = std::min(firstCol + cols, actualRows);
 

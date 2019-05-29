@@ -41,12 +41,16 @@ int main(int argc, char** argv) {
 
   multiply(myAInfo, myCInfo, myA, myB, myC, config, world, layer);
 
+  bool isReducedToZeroLayer = false;
+
   if (config.verbose) {
-    gatherC(myAInfo, myC, world);
+    gatherC(myAInfo, myC, world, replGroup, layer, config,
+            isReducedToZeroLayer);
   }
 
   if (config.print_ge) {
-    countGe(myAInfo, myC, config.ge_value, world);
+    countGe(myAInfo, myC, world, replGroup, layer, config,
+            isReducedToZeroLayer);
   }
 
   MPI_Finalize();
