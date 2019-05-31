@@ -4,23 +4,17 @@ project(matrixmul)
 set(CMAKE_CXX_STANDARD 14)
 
 if (NOT CMAKE_BUILD_TYPE)
-    set(CMAKE_BUILD_TYPE "Debug" CACHE STRING
+    set(CMAKE_BUILD_TYPE "Release" CACHE STRING
             "Choose the type of build, options are: Debug Release"
             FORCE)
 
-    message(STATUS "No build type selected, default to Debug")
-    set(CMAKE_BUILD_TYPE "Debug")
+    message(STATUS "No build type selected, default to Release")
 endif()
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra")
-set(CMAKE_CXX_FLAGS_RELEASE "-flto -O3 -fomit-frame-pointer -ffast-math -funsafe-math-optimizations -DNDEBUG")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -h msglevel_3")
+set(CMAKE_CXX_FLAGS_RELEASE "-O3 -hfp3 -h vector3 -hipa4 -hwp -h pl=...")
+# set(CMAKE_CXX_FLAGS_RELEASE "-flto -O3 -fomit-frame-pointer -ffast-math -funsafe-math-optimizations -DNDEBUG")
 set(CMAKE_CXX_FLAGS_DEBUG "-g -O0")
-
-if (ENABLE_SANITIZERS)
-    message(STATUS "Sanitizers enabled")
-    set(CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} -fsanitize=address")
-endif()
-
 
 
 # FIND DEPENDENCIES

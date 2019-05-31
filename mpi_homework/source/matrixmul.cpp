@@ -26,6 +26,8 @@ int main(int argc, char** argv) {
     exit(EXIT_FAILURE);
   }
 
+  double startTime = MPI_Wtime();
+
   SparseMatrix myA;
   DenseMatrix myB;
   DenseMatrix myC;
@@ -48,6 +50,12 @@ int main(int argc, char** argv) {
 
   if (config.print_ge) {
     countGe(myC, world, replGroup, layer, config, isCReducedToZeroLayer);
+  }
+
+  double endTime = MPI_Wtime();
+
+  if (world.rank == 0) {
+    fprintf(stderr, "Running time: %f\n", endTime - startTime);
   }
 
   MPI_Finalize();

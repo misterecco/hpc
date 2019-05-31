@@ -217,13 +217,13 @@ vector<MatrixInfo> SparseMatrix::getRowDistributionInfo(
 vector<SparseMatrix> SparseMatrix::getRowDistribution(int numProcesses) const {
   vector<SparseMatrix> dist(numProcesses);
 
-  int i = 0;
+  int r = 0;
   for (auto& frag : dist) {
     frag.rows = rows;
     frag.cols = cols;
     frag.row_se.push_back(0);
     frag.actualRows = actualRows;
-    frag.rank = i++;
+    frag.rank = r++;
   }
 
   int rowsPerProcess = rows / numProcesses;
@@ -240,13 +240,13 @@ vector<SparseMatrix> SparseMatrix::getRowDistribution(int numProcesses) const {
         frag.col_indx.push_back(col_indx[i]);
       }
 
-      for (auto& frag : dist) {
-        frag.row_se.push_back(frag.values.size());
+      for (auto& f: dist) {
+        f.row_se.push_back(f.values.size());
       }
     }
   }
 
-  for (auto& frag : dist) {
+  for (auto& frag: dist) {
     frag.nnz = frag.values.size();
     frag.compact();
   }

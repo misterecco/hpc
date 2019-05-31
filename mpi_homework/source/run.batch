@@ -1,0 +1,18 @@
+#!/bin/bash -l
+#SBATCH --job-name matrixmul       # this will be shown in the queueing system
+#SBATCH --output "out/%j.out"        # stdout redirection
+#SBATCH --error "out/%j.err"         # stderr redirection
+#SBATCH --account "GC72-18"          # the number of our grant
+#SBATCH --nodes 8                    # how many nodes we want
+#SBATCH --tasks-per-node 24          # each node is 2 socket, 12 core, so we want 24 tasks on each node
+#SBATCH --time 00:05:00              # if the job runs longer than this, it'll be killed
+
+INPUT_FILE=../examples/sample_1000_000
+
+srun ./build/matrixmul -f $INPUT_FILE -s 42 -c 2 -e 1 -g 0.5 -m
+
+srun ./build/matrixmul -f $INPUT_FILE -s 42 -c 2 -e 1 -g 0.5
+
+srun ./build/matrixmul -f $INPUT_FILE -s 42 -c 2 -e 1 -g 0.5 -m -i
+
+srun ./build/matrixmul -f $INPUT_FILE -s 42 -c 2 -e 1 -g 0.5 -i
