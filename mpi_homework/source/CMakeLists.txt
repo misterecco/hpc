@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.9)
+cmake_minimum_required(VERSION 3.5)
 project(matrixmul)
 
 set(CMAKE_CXX_STANDARD 14)
@@ -27,9 +27,12 @@ endif()
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/")
 
+# set(MKL_USE_sdl on)
+set(MKL_USE_interface "lp64" CACHE STRING "for Intel(R)64 compatible arch: ilp64/lp64 or for ia32 arch: cdecl/stdcall")
+
 find_package(MKL REQUIRED)
-include_directories(${MKL_INCLUDE_DIRS})
-link_directories(${MKL_LIBRARIES})
+include_directories(${MKL_INCLUDE_DIR})
+link_directories(${MKL_LIBRARY_DIR})
 
 find_package(MPI REQUIRED)
 include_directories(${MPI_CXX_INCLUDE_DIRS})
@@ -50,8 +53,7 @@ add_library(communication communication.cpp)
 
 target_link_libraries(matrix densematgen)
 
-target_link_libraries(multiplication matrix)
-target_link_libraries(multiplication mkl_intel_lp64 mkl_sequential mkl_core)
+target_link_libraries(multiplication ${MKL_LIBRARIES})
 
 add_executable(matrixmul matrixmul.cpp)
 target_link_libraries(matrixmul

@@ -17,7 +17,7 @@ struct MatrixInfo {
   // IMPORTANT: keep in sync with actual fields count
   static constexpr int size = 6;
 
-  void print() const;
+  void print(FILE* file=stdout) const;
 
   bool check() const;
 };
@@ -52,7 +52,7 @@ struct SparseMatrix {
 
   void broadcast(const MpiGroup& replGroup, int sourceRank);
 
-  void print() const;
+  void print(FILE* file=stdout) const;
 };
 
 struct DenseMatrix {
@@ -72,7 +72,7 @@ struct DenseMatrix {
 
   void compact();
   void printColMajor() const;
-  void print() const;
+  void print(FILE* file=stdout) const;
 
   void broadcast(const MpiGroup& replGroup, int sourceRank);
 

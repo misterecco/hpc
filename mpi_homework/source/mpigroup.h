@@ -26,3 +26,4 @@ struct MpiGroup {
     MPI_Comm_rank(comm, &rank);
   }
 };
+

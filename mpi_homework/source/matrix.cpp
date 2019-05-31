@@ -13,8 +13,8 @@ using std::min;
 using std::string;
 using std::vector;
 
-void MatrixInfo::print() const {
-  printf("rows: %d cols: %d actualRows: %d nnz: %d rank: %d firstCol: %d\n",
+void MatrixInfo::print(FILE* file) const {
+  fprintf(file, "rows: %d cols: %d actualRows: %d nnz: %d rank: %d firstCol: %d\n",
          rows, cols, actualRows, nnz, rank, firstCol);
 }
 
@@ -27,7 +27,7 @@ SparseMatrix::SparseMatrix(const string& filePath) {
   ifstream input(filePath);
 
   if (!input.is_open()) {
-    printf("Unable to read sparse matrix file\n");
+    fprintf(stderr, "Unable to read sparse matrix file\n");
     exit(EXIT_FAILURE);
   }
 
@@ -86,23 +86,23 @@ sparse_matrix_t SparseMatrix::toMklSparse() {
   return mat;
 }
 
-void SparseMatrix::print() const {
-  cout << rows << " " << cols << " " << nnz << " " << rank << endl;
+void SparseMatrix::print(FILE* file) const {
+  fprintf(file, "%d %d %d %d\n", rows, cols, nnz, rank);
 
   for (int i = 0; i < nnz; i++) {
-    cout << values[i] << " ";
+    fprintf(file, "%f ", values[i]);
   }
-  cout << endl;
+  fprintf(file, "\n");
 
   for (int i = 0; i < rows + 1; i++) {
-    cout << row_se[i] << " ";
+    fprintf(file, "%d ", row_se[i]);
   }
-  cout << endl;
+  fprintf(file, "\n");
 
   for (int i = 0; i < nnz; i++) {
-    cout << col_indx[i] << " ";
+    fprintf(file, "%d ", col_indx[i]);
   }
-  cout << endl;
+  fprintf(file, "\n");
 }
 
 MatrixInfo SparseMatrix::getInfo() const {
@@ -140,13 +140,14 @@ vector<MatrixInfo> SparseMatrix::getColumnDistributionInfo(
   }
 
   for (int i = 0; i < numProcesses; i++) {
-    dist.push_back({
+    MatrixInfo mi = {
         .rows = rows,
         .cols = cols,
         .nnz = nnzs[i],
         .actualRows = actualRows,
         .rank = i,
-    });
+    };
+    dist.push_back(mi);
   }
 
   return dist;
@@ -200,13 +201,14 @@ vector<MatrixInfo> SparseMatrix::getRowDistributionInfo(
     int startRow = i * rowsPerProcess;
     int endRow = (i + 1) * rowsPerProcess;
 
-    dist.push_back({
+    MatrixInfo mi = {
         .rows = rows,
         .cols = cols,
         .nnz = row_se[endRow] - row_se[startRow],
         .actualRows = actualRows,
         .rank = i,
-    });
+    };
+    dist.push_back(mi);
   }
 
   return dist;
@@ -368,13 +370,13 @@ void DenseMatrix::printColMajor() const {
   printf("-------------------------------------\n");
 }
 
-void DenseMatrix::print() const {
-  cout << actualRows << " " << actualRows << endl;
+void DenseMatrix::print(FILE* file) const {
+  fprintf(file, "%d %d\n", actualRows, actualRows);
   for (int row = 0; row < actualRows; row++) {
     for (int col = 0; col < actualRows; col++) {
-      cout << values[col * rows + row] << " ";
+      fprintf(file, "%f ", values[col * rows + row]);
     }
-    cout << endl;
+    fprintf(file, "\n");
   }
 }
 

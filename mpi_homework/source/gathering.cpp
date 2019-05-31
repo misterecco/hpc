@@ -22,10 +22,6 @@ int reduceCountGe(const DenseMatrix& myC, double g, const MpiGroup& group) {
   MPI_Reduce(&myCount, &totalCount, 1, MPI_INT, MPI_SUM, 0, group.comm);
 
   return totalCount;
-
-  if (group.rank == 0) {
-    std::cout << totalCount << std::endl;
-  }
 }
 
 void gatherC(const MatrixInfo& cInfo, DenseMatrix& myC, const MpiGroup& world,
