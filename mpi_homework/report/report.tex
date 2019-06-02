@@ -34,6 +34,7 @@ Rozwiązanie podzielone jest na pliki w następujący sposób:
       \item \emph{initialization.cpp} -- wczytywanie macierzy A, generowanie macierzy B, początkowa dystrybucja danych (jak dla $c=1$)
       \item \emph{replication.cpp} -- rozsyłanie danych między procesami z tych samych grup replikacyjnych, w przypadku algorytmu InnerABC
                                                          dodatkowo wykonanie początkowego przesunięcia fragmentów macierzy A
+      \item \emph{communication.cpp} -- operacja shift-and-compute (jeden krok obliczeń jednego procesu)
       \item \emph{multiplication.cpp} -- mnożenie macierzy i komunikacja z tym związana
       \item \emph{gathering.cpp} -- zbieranie wyników
     \end{itemize}

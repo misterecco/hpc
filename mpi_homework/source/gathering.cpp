@@ -29,10 +29,10 @@ void gatherCInReplGroup(DenseMatrix& myC, const MpiGroup& replGroup,
   if (replGroup.rank == 0) {
     DenseMatrix myInitC = myC;
     MPI_Reduce(myInitC.values.data(), myC.values.data(), myC.rows * myC.cols,
-                MPI_DOUBLE, MPI_SUM, 0, replGroup.comm);
+               MPI_DOUBLE, MPI_SUM, 0, replGroup.comm);
   } else {
     MPI_Reduce(myC.values.data(), nullptr, myC.rows * myC.cols, MPI_DOUBLE,
-                MPI_SUM, 0, replGroup.comm);
+               MPI_SUM, 0, replGroup.comm);
   }
   isCReducedToZeroLayer = true;
 }
@@ -52,9 +52,9 @@ void gatherC(const MatrixInfo& cInfo, DenseMatrix& myC, const MpiGroup& world,
   }
 }
 
-void countGe(DenseMatrix& myC, const MpiGroup& world,
-             const MpiGroup& replGroup, const MpiGroup& layer,
-             const Config& config, bool& isCReducedToZeroLayer) {
+void countGe(DenseMatrix& myC, const MpiGroup& world, const MpiGroup& replGroup,
+             const MpiGroup& layer, const Config& config,
+             bool& isCReducedToZeroLayer) {
   if (config.use_inner) {
     if (!isCReducedToZeroLayer)
       gatherCInReplGroup(myC, replGroup, isCReducedToZeroLayer);

@@ -11,7 +11,19 @@ void initialize(SparseMatrix& myA, DenseMatrix& myC, const Config& config,
 
   MPI_Request requests[3];
 
-  if (world.rank == 0) {
+  if (world.size == 1) {
+    config.print(stderr);
+
+    double startTime = MPI_Wtime();
+
+    myA = SparseMatrix(config.sparse_matrix_file);
+    myAInfo = myA.getInfo();
+
+    double readingTime = MPI_Wtime();
+
+    fprintf(stderr, "Matrix reading time: %f, initial distibution time: 0.0\n",
+            readingTime - startTime);
+  } else if (world.rank == 0) {
     config.print(stderr);
 
     double startTime = MPI_Wtime();
@@ -50,9 +62,8 @@ void initialize(SparseMatrix& myA, DenseMatrix& myC, const Config& config,
       append(allRowSe, frag.row_se);
     }
 
-    MPI_Iscatter(allRowSe.data(), myAInfo.rows + 1, MPI_INT,
-                  myA.row_se.data(), myAInfo.rows + 1, MPI_INT, 0,
-                  MPI_COMM_WORLD, requests);
+    MPI_Iscatter(allRowSe.data(), myAInfo.rows + 1, MPI_INT, myA.row_se.data(),
+                 myAInfo.rows + 1, MPI_INT, 0, MPI_COMM_WORLD, requests);
 
     vector<int> allNnz;
     vector<int> allColIdx;
@@ -69,17 +80,17 @@ void initialize(SparseMatrix& myA, DenseMatrix& myC, const Config& config,
     }
 
     MPI_Iscatterv(allColIdx.data(), allNnz.data(), allDisp.data(), MPI_INT,
-                  myA.col_indx.data(), myAInfo.nnz, MPI_INT, 0,
-                  MPI_COMM_WORLD, requests + 1);
+                  myA.col_indx.data(), myAInfo.nnz, MPI_INT, 0, MPI_COMM_WORLD,
+                  requests + 1);
 
     vector<double> allValues;
     for (auto& frag : frags) {
       append(allValues, frag.values);
     }
 
-    MPI_Iscatterv(allValues.data(), allNnz.data(), allDisp.data(),
-                  MPI_DOUBLE, myA.values.data(), myAInfo.nnz, MPI_DOUBLE, 0,
-                  MPI_COMM_WORLD, requests + 2);
+    MPI_Iscatterv(allValues.data(), allNnz.data(), allDisp.data(), MPI_DOUBLE,
+                  myA.values.data(), myAInfo.nnz, MPI_DOUBLE, 0, MPI_COMM_WORLD,
+                  requests + 2);
 
     MPI_Waitall(3, requests, MPI_STATUSES_IGNORE);
 
@@ -98,7 +109,7 @@ void initialize(SparseMatrix& myA, DenseMatrix& myC, const Config& config,
     }
 
     MPI_Iscatter(nullptr, myAInfo.rows + 1, MPI_INT, myA.row_se.data(),
-                  myAInfo.rows + 1, MPI_INT, 0, MPI_COMM_WORLD, requests);
+                 myAInfo.rows + 1, MPI_INT, 0, MPI_COMM_WORLD, requests);
 
     MPI_Iscatterv(nullptr, nullptr, nullptr, MPI_INT, myA.col_indx.data(),
                   myAInfo.nnz, MPI_INT, 0, MPI_COMM_WORLD, requests + 1);

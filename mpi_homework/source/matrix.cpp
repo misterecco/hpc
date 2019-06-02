@@ -14,8 +14,9 @@ using std::string;
 using std::vector;
 
 void MatrixInfo::print(FILE* file) const {
-  fprintf(file, "rows: %d cols: %d actualRows: %d nnz: %d rank: %d firstCol: %d\n",
-         rows, cols, actualRows, nnz, rank, firstCol);
+  fprintf(file,
+          "rows: %d cols: %d actualRows: %d nnz: %d rank: %d firstCol: %d\n",
+          rows, cols, actualRows, nnz, rank, firstCol);
 }
 
 bool MatrixInfo::check() const {
@@ -240,13 +241,13 @@ vector<SparseMatrix> SparseMatrix::getRowDistribution(int numProcesses) const {
         frag.col_indx.push_back(col_indx[i]);
       }
 
-      for (auto& f: dist) {
+      for (auto& f : dist) {
         f.row_se.push_back(f.values.size());
       }
     }
   }
 
-  for (auto& frag: dist) {
+  for (auto& frag : dist) {
     frag.nnz = frag.values.size();
     frag.compact();
   }

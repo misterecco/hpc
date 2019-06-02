@@ -24,12 +24,15 @@ void gatherC(const MatrixInfo& cInfo, DenseMatrix& myC, const MpiGroup& world,
              const MpiGroup& replGroup, const MpiGroup& layer,
              const Config& config, bool& isCReducedToZeroLayer);
 
-void countGe(DenseMatrix& myC, const MpiGroup& world,
-             const MpiGroup& replGroup, const MpiGroup& layer,
-             const Config& config, bool& isCReducedToZeroLayer);
+void countGe(DenseMatrix& myC, const MpiGroup& world, const MpiGroup& replGroup,
+             const MpiGroup& layer, const Config& config,
+             bool& isCReducedToZeroLayer);
 
 template <typename T>
 void broadcastMatrix(T& myMat, const MpiGroup& replGroup) {
+  if (replGroup.size == 0)
+    return;
+
   T myInitMat = myMat;
   MatrixInfo myMatInfo = myInitMat.getInfo();
 
