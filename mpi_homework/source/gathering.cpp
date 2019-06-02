@@ -24,53 +24,46 @@ int reduceCountGe(const DenseMatrix& myC, double g, const MpiGroup& group) {
   return totalCount;
 }
 
+void gatherCInReplGroup(DenseMatrix& myC, const MpiGroup& replGroup,
+                        bool& isCReducedToZeroLayer) {
+  if (replGroup.rank == 0) {
+    DenseMatrix myInitC = myC;
+    MPI_Reduce(myInitC.values.data(), myC.values.data(), myC.rows * myC.cols,
+                MPI_DOUBLE, MPI_SUM, 0, replGroup.comm);
+  } else {
+    MPI_Reduce(myC.values.data(), nullptr, myC.rows * myC.cols, MPI_DOUBLE,
+                MPI_SUM, 0, replGroup.comm);
+  }
+  isCReducedToZeroLayer = true;
+}
+
 void gatherC(const MatrixInfo& cInfo, DenseMatrix& myC, const MpiGroup& world,
              const MpiGroup& replGroup, const MpiGroup& layer,
              const Config& config, bool& isCReducedToZeroLayer) {
   if (config.use_inner) {
-    if (replGroup.rank == 0) {
-      DenseMatrix myInitC = myC;
-      MPI_Reduce(myInitC.values.data(), myC.values.data(), myC.rows * myC.cols,
-                 MPI_DOUBLE, MPI_SUM, 0, replGroup.comm);
-    } else {
-      MPI_Reduce(myC.values.data(), nullptr, myC.rows * myC.cols, MPI_DOUBLE,
-                 MPI_SUM, 0, replGroup.comm);
-    }
+    gatherCInReplGroup(myC, replGroup, isCReducedToZeroLayer);
 
     if (layer.color == 0) {
       gatherAndPrintMatrix(myC, cInfo, layer);
     }
 
-    isCReducedToZeroLayer = true;
   } else {
     gatherAndPrintMatrix(myC, cInfo, world);
   }
 }
 
-void countGe(const DenseMatrix& myC, const MpiGroup& world,
+void countGe(DenseMatrix& myC, const MpiGroup& world,
              const MpiGroup& replGroup, const MpiGroup& layer,
-             const Config& config, bool isCReducedToZeroLayer) {
+             const Config& config, bool& isCReducedToZeroLayer) {
   if (config.use_inner) {
-    if (isCReducedToZeroLayer) {
-      if (layer.color == 0) {
-        int totalCount = reduceCountGe(myC, config.ge_value, layer);
+    if (!isCReducedToZeroLayer)
+      gatherCInReplGroup(myC, replGroup, isCReducedToZeroLayer);
 
-        if (layer.rank == 0) {
-          printf("%d\n", totalCount);
-        }
-      }
-    } else {
-      int replGroupCount = reduceCountGe(myC, config.ge_value, replGroup);
+    if (layer.color == 0) {
+      int totalCount = reduceCountGe(myC, config.ge_value, layer);
 
-      if (layer.color == 0) {
-        int totalCount = 0;
-
-        MPI_Reduce(&replGroupCount, &totalCount, 1, MPI_INT, MPI_SUM, 0,
-                   layer.comm);
-
-        if (layer.rank == 0) {
-          printf("%d\n", totalCount);
-        }
+      if (layer.rank == 0) {
+        printf("%d\n", totalCount);
       }
     }
   } else {

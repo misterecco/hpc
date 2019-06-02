@@ -20,10 +20,23 @@ int main(int argc, char** argv) {
 
   MpiGroup world;
 
+  if (world.rank == 0) {
+    fprintf(stderr, "World size: %d\n", world.size);
+  }
+
   if (!config.check()) {
     if (world.rank == 0)
       print_usage(argv);
     exit(EXIT_FAILURE);
+  }
+
+  if (config.use_inner) {
+    int c = config.repl_group_size;
+    if (world.size % (c * c) != 0) {
+      if (world.rank == 0)
+        fprintf(stderr, "c * c must divide number of processes\n");
+      exit(EXIT_FAILURE);
+    }
   }
 
   double startTime = MPI_Wtime();

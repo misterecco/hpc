@@ -12,6 +12,7 @@ if (NOT CMAKE_BUILD_TYPE)
 endif()
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -h msglevel_3")
+# set(CMAKE_CXX_FLAGS_RELEASE "-O3 -Ofast -fp-model fast=2 -funroll-loops -std=c++14")
 set(CMAKE_CXX_FLAGS_RELEASE "-O3 -hfp3 -h vector3 -hipa4 -hwp -h pl=...")
 # set(CMAKE_CXX_FLAGS_RELEASE "-flto -O3 -fomit-frame-pointer -ffast-math -funsafe-math-optimizations -DNDEBUG")
 set(CMAKE_CXX_FLAGS_DEBUG "-g -O0")
@@ -21,7 +22,7 @@ set(CMAKE_CXX_FLAGS_DEBUG "-g -O0")
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/")
 
-# set(MKL_USE_sdl on)
+# set(MKL_USE_parallel True)
 set(MKL_USE_interface "lp64" CACHE STRING "for Intel(R)64 compatible arch: ilp64/lp64 or for ia32 arch: cdecl/stdcall")
 
 find_package(MKL REQUIRED)

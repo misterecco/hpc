@@ -24,9 +24,9 @@ void gatherC(const MatrixInfo& cInfo, DenseMatrix& myC, const MpiGroup& world,
              const MpiGroup& replGroup, const MpiGroup& layer,
              const Config& config, bool& isCReducedToZeroLayer);
 
-void countGe(const DenseMatrix& myC, const MpiGroup& world,
+void countGe(DenseMatrix& myC, const MpiGroup& world,
              const MpiGroup& replGroup, const MpiGroup& layer,
-             const Config& config, bool isCReducedToZeroLayer);
+             const Config& config, bool& isCReducedToZeroLayer);
 
 template <typename T>
 void broadcastMatrix(T& myMat, const MpiGroup& replGroup) {

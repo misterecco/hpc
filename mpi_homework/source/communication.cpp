@@ -61,3 +61,4 @@ void shiftAandCompute(SparseMatrix& myA, const MpiGroup& layer, int offset,
     myA = nextA;
   }
 }
+

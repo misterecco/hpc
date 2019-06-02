@@ -22,8 +22,8 @@ void multiplyLocal(SparseMatrix& A, const DenseMatrix& B, DenseMatrix& C,
                     SPARSE_LAYOUT_COLUMN_MAJOR, B.values.data(), C.cols, B.rows,
                     1.0, C.values.data(), C.rows);
   } else {
-    for (int i = 0; i < B.rows; i++) {
-      for (int j = 0; j < B.cols; j++) {
+    for (int j = 0; j < B.cols; j++) {
+      for (int i = 0; i < B.rows; i++) {
         int firstK = A.row_se[i];
         int lastK = A.row_se[i + 1];
 

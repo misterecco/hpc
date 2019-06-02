@@ -23,7 +23,7 @@ def generate_matrix(n, d):
 
         for col in cols:
             col_indx.append(col)
-            values.append(random.random())
+            values.append(random.random() * 2 - 1)
 
         row_se.append(len(values))
 

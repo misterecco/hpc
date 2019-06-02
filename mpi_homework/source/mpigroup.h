@@ -15,7 +15,7 @@ struct MpiGroup {
   }
 
   MpiGroup(int groupColor, int worldRank) {
-    MPI_Comm_split(MPI_COMM_WORLD, color, worldRank, &comm);
+    MPI_Comm_split(MPI_COMM_WORLD, groupColor, worldRank, &comm);
     color = groupColor;
     init();
   }

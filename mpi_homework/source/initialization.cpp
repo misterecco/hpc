@@ -5,7 +5,6 @@
 
 using std::vector;
 
-// TODO: fix case when there is only one process
 void initialize(SparseMatrix& myA, DenseMatrix& myC, const Config& config,
                 const MpiGroup& world) {
   MatrixInfo myAInfo;
@@ -15,7 +14,11 @@ void initialize(SparseMatrix& myA, DenseMatrix& myC, const Config& config,
   if (world.rank == 0) {
     config.print(stderr);
 
+    double startTime = MPI_Wtime();
+
     SparseMatrix A(config.sparse_matrix_file);
+
+    double readingTime = MPI_Wtime();
 
     A.addPadding(world.size);
 
@@ -79,6 +82,11 @@ void initialize(SparseMatrix& myA, DenseMatrix& myC, const Config& config,
                   MPI_COMM_WORLD, requests + 2);
 
     MPI_Waitall(3, requests, MPI_STATUSES_IGNORE);
+
+    double initTime = MPI_Wtime();
+
+    fprintf(stderr, "Matrix reading time: %f, initial distibution time: %f\n",
+            readingTime - startTime, initTime - readingTime);
   } else {
     {
       MPI_Request request;
