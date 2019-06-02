@@ -22,12 +22,10 @@ set(CMAKE_CXX_FLAGS_DEBUG "-g -O0")
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/")
 
-# set(MKL_USE_parallel True)
-set(MKL_USE_interface "lp64" CACHE STRING "for Intel(R)64 compatible arch: ilp64/lp64 or for ia32 arch: cdecl/stdcall")
-
 find_package(MKL REQUIRED)
 include_directories(${MKL_INCLUDE_DIR})
 link_directories(${MKL_LIBRARY_DIR})
+link_directories(${MKL_LIBRARIES})
 
 find_package(MPI REQUIRED)
 include_directories(${MPI_CXX_INCLUDE_DIRS})
@@ -48,7 +46,7 @@ add_library(communication communication.cpp)
 
 target_link_libraries(matrix densematgen)
 
-target_link_libraries(multiplication ${MKL_LIBRARIES})
+target_link_libraries(multiplication mkl_intel_lp64 mkl_sequential mkl_core)
 
 add_executable(matrixmul matrixmul.cpp)
 target_link_libraries(matrixmul
