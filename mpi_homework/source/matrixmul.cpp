@@ -55,7 +55,7 @@ int main(int argc, char** argv) {
 
   replicate(myA, myC, config, world, replGroup, layer);
 
-  multiply(myA, myB, myC, config, layer);
+  multiply(myA, myB, myC, config, layer, replGroup);
 
   if (config.verbose) {
     gatherC(cInfo, myC, world, replGroup, layer, config, isCReducedToZeroLayer);

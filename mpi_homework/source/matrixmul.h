@@ -18,7 +18,8 @@ void shiftAandCompute(SparseMatrix& myA, const MpiGroup& layer, int offset,
                       std::function<void()> computation);
 
 void multiply(SparseMatrix& myA, DenseMatrix& myB, DenseMatrix& myC,
-              const Config& config, const MpiGroup& layer);
+              const Config& config, const MpiGroup& layer,
+              const MpiGroup& replGroup);
 
 void gatherC(const MatrixInfo& cInfo, DenseMatrix& myC, const MpiGroup& world,
              const MpiGroup& replGroup, const MpiGroup& layer,

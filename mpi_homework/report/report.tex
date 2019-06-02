@@ -17,6 +17,9 @@
 \begin{document}
 \maketitle
 
+\section{Kompilacja}
+Program powinien kompilować się na dowolnym kompilatorze (gcc, cray, intel), ale najlepsze wyniki uzyskałem na kompilatorze
+\textbf{Cray} i na nim proszę go kompilować.
 
 \section{Struktura plików}
 Rozwiązanie podzielone jest na pliki w następujący sposób:
@@ -24,7 +27,7 @@ Rozwiązanie podzielone jest na pliki w następujący sposób:
   \item Struktury danych:
     \begin{itemize}
        \item \emph{config.h} -- struktura przechowująca sparsowane flagi przekazane do programu
-       \item \emph{mpigroup.h} -- struktura definiująca grupę obliczeniową (wszystkie procesy, grupy replikacyjne, warstwy)
+       \item \emph{mpigroup.h} -- struktura definiująca grupę obliczeniową (cały świat, grupy replikacyjne, warstwy)
        \item \emph{matrix.h matrix.cpp} -- struktury przechowujące informacje o macierzy oraz macierze rzadkie i gęste
     \end{itemize}
   \item \emph{densematgen.h densematgen.cpp} -- pliki dostarczone razem z treścią zadania służacego do generowania macierzy gęstej
@@ -42,7 +45,7 @@ Rozwiązanie podzielone jest na pliki w następujący sposób:
 
 \section{Struktury danych}
 
-Przed rozpoczęciem obliczeń wszystkie macierze są wyrównywane zerami, tak aby ilość wierszy i kolumn była podzielna przez ilość procesów.
+Przed rozpoczęciem obliczeń wszystkie macierze są rozszerzane zerami, tak aby ilość wierszy i kolumn była podzielna przez ilość procesów.
 
 \subsection{Metadane macierzy}
 Najważniejsze informacje o macierzy przechowywane są w strukturze \emph{MatrixInfo}. Zawiera ona wszystkie informacje potrzebne 
@@ -51,7 +54,7 @@ macierzy.
 
 \subsection{Macierze rzadkie}
 Macierze rzadkie przechowywane są w strukturze \emph{SparseMatrix}. Jest to dokładnie taki sam format jak format na wejściu, 
-czyli CSR z trzema tablicami.
+czyli CRS z trzema tablicami.
 Taki format został wybrany z kilku powodów:
 \begin{itemize}
   \item Nie trzeba tracić czasu na zmianę formatu podczas inicjalizacji
@@ -61,9 +64,9 @@ Taki format został wybrany z kilku powodów:
 
 \subsection{Macierze gęste}
 Macierze gęste przechowywane są w pojedynczej tablicy rozmiaru $rows \times cols$ w kolejności column-major.
-Taki formata został wybrany z następujących powodów:
+Taki format został wybrany z następujących powodów:
 \begin{itemize}
-  \item Jest to korzystna kolejność dla implemetacji lokalnego mnożenia macierz
+  \item Jest to korzystna kolejność dla implemetacji lokalnego mnożenia macierzy
   \item Procesy trzymają w swoich fragmentach całe kolumny oryginalnych macierzy, więc rozsyłanie i zbieranie macierzy jest dużo prostsze
            w takim formacie i nie wymaga wykonywania dodatkowych kopii (lokalnych) macierzy
 \end{itemize} 
@@ -71,7 +74,7 @@ Taki formata został wybrany z następujących powodów:
 \section{Intesywność numeryczna}
 Oznaczenia:
 \begin{itemize}
-  \item $d$ -- oznaczmy średnią ilość niezerowych elementów w jednym wierszu macierzy A
+  \item $d$ -- średnia ilość niezerowych elementów w jednym wierszu macierzy A
   \item $e$ -- ilość mnożeń macierzy A przez macierz B
   \item $n$ -- wymiary macierzy A, B i C
 \end{itemize}
@@ -85,11 +88,11 @@ Zatem do policzenia macierzy C potrzebne jest $(2d-1) \cdot n^2 \cdot e$ operacj
 Rozpatrzmy to podobnie jak poprzednio. W tym przypadku istotne staje się jak trzymana jest macierz rzadka A.
 Założę teraz, że jest to format CRS.
 W jednym kroku, do policzenia jednej komórki potrzebujemy odczytać jeden wiersz macierzy A i jedną kolumnę macierzy B.
-Jeśli chodzi o zapisy to potrzebujemy to zrobić to tylko raz w macierzy C.
+Jeśli chodzi o zapisy to potrzebujemy to zrobić tylko raz w macierzy C.
 
-Wczytanie wiersza macierzy A wymaga odczytania średnio $(4 \cdot 2 + 4 \cdot d + 8 \cdot d$ bajtów ($2$ el. tablicy trzymającej długości wierszy,
+Wczytanie wiersza macierzy A wymaga odczytania średnio $4 \cdot 2 + 4 \cdot d + 8 \cdot d$ bajtów ($2$ el. tablicy trzymającej długości wierszy,
 $d$ indeksów kolumn, $d$ elementów macierzy A). W macierzy B czytamy średnio $8 \cdot d$ bajtów (d elementów).
-Na koniec jeszcze musimy wykonać jeden zapis w macierzy $C$
+Na koniec jeszcze musimy wykonać jeden zapis w macierzy $C$ (8 bajtów)
 
 Razem daje to $16 + 20d$ bajtów na element macierzy C w jednym kroku.
 
@@ -101,8 +104,9 @@ W obu algorytmach (o ile $c \neq 1$) procesy podzielone są w dwuwymiarową siat
 replikacyjne rozmiaru $c$, a pomiędzy tymi grupami, procesy o tych samych rangach wyznaczają warstwy. Warstw musi być oczywiście $c$.
 
 W trakcie inicjalizacji koordynator wczytuje macierz A i wysyła odpowiednie fragmenty do wszystkich procesów.
-Następnie, procesy w tych samych grupach replikacji wymieniają między sobą swoje fragmenty macierzy A (i C dla InnerABC).
-W trakcie obliczeń procesy wysyłają komunikaty tylko wewnątrz swojej warstwy.
+Następnie, procesy w tych samych grupach replikacji wymieniają między sobą swoje fragmenty macierzy A (i B dla InnerABC).
+W trakcie obliczeń procesy wysyłają komunikaty tylko wewnątrz swojej warstwy (w InnerABC trzeba jeszcze wymienić się obliczonymi fragmentami B
+na początku każdego kroku).
 W trakcie końcowego zbierania danych komunikacja wygląda inaczej w obu algorytmach i szerzej opisana jest
 w części poświęconej optymalizacjom.
 
@@ -111,20 +115,22 @@ w części poświęconej optymalizacjom.
 Przy implementacji największy nacisk położyłem na efektywne wykorzystanie możliwości danych przez MPI:
 \begin{itemize}
 \item Większość komunikacji jest asynchroniczna i przepleciona z obliczeniami. 
-\item Początkowe rozsyłanie macierzy przez koordynatora odbywa się tabela po tabeli. 
+\item Początkowe rozsyłanie fragmentów macierzy A przez koordynatora odbywa się tabela po tabeli. 
          Po wysłaniu jednej tabeli mechanizmem \emph{scatter} (asynchronicznie), 
          koorydator od razu zabiera się za przygotowanie kolejnej.
 \item Przesyłanie macierzy w trakcie replikacji w grupie replikacyjnej 
          odbywa się przez customowe komunikatory za pomocą mechanizmu \emph{broadcast}.
-\item Przesyłanie macierzy wewnątrz warstw (\emph{shift}) w trakcie obliczeń przeplecione jest z lokalnie wykonywanym mnożeniem.
-\item Zbieranie macierzy C wewnątrz grupy replikacyjnej odbywa się za pomocą mechanizmu \emph{reduce} (tylko w InnerABC),
-         operacja sumy. Zbieranie macierzy C w warstwie zerowe to zwykłe \emph{gather}.
+\item Przesyłanie macierzy wewnątrz warstw (shift) w trakcie obliczeń przeplecione jest z lokalnie wykonywanym mnożeniem.
+         W InnerABC wymiana obliczonych fragmentów macierzy B wewnątrz grup replikacyjnych 
+         na początku niezerowych kroków odbywa się przez mechanizm \emph{allreduce}
+\item Zbieranie macierzy C wewnątrz grupy replikacyjnej odbywa się za pomocą mechanizmu \emph{reduce} z operacją sumowania (tylko w InnerABC)
+         Zbieranie macierzy C w warstwie zerowej to zwykłe \emph{gather}. W przypadku ColumnA jest od razu wykonywana operacja \emph{gather}.
 \item Zliczanie liczby elementów większych od danego -- w przypadku ColumnA jest to zwykłe \emph{reduce} po wszystkich procesach,
-         w przypadku InnerABC macierz C najpierw zbierana jest do warstwy 0 i dopiero w tej warstwie jest wykonywana redukcja
+         w przypadku InnerABC macierz C najpierw zbierana jest do warstwy 0 i dopiero w tej warstwie jest wykonywana redukcja.
 \end{itemize}
 
-Macierz A dzielona jest między procesy po równej ilości kolumn/wierszy. Innych opcji nie rozważałem ponieważ dokładnie tak
-to było opisane w artykule opisującym algorytmy.
+Macierz A dzielona jest między procesy po równej ilości kolumn/wierszy. 
+Innych opcji nie rozważałem ponieważ byłoby to niezgodne z opisem algorytmu.
 
 \subsection{Flagi kompilacji}
 Najlepsze wyniki uzyskałem na kompilatorze \textbf{Cray}. Włączyłem następujące opcje:
@@ -145,13 +151,18 @@ wykorzystaniu wersji sekwencyjnej i poleganiu na MPI, dlatego nie próbowałem u
 
 \section{Skalowalność}
 
+Wszystkie podane czasy to kompletne czasy uruchomienia programu, razem z czasem operacji IO. 
+
 \subsection{Silna skalowalność}
 
 Testy silnej skalowalności zostały przeprowadzone na dwóch macierzach A. 
 Pierwsza miała $n=50000$ wierszy i $d=1000$ wartości w każdym wierszu. Druga -- $n=100000, d=100$.
-W pierwszy przypadku mnożenie było wykonywane $e=5$ razy, w drugim $e=2$.
+W pierwszym przypadku mnożenie było wykonywane $e=5$ razy, w drugim $e=2$.
 W obu przypadkach czas wczytywania macierzy wynosił ok. $9.5s$
 Wyniki zostały przedstawione na rys.~\ref{fig:scal_strong_1} i rys.~\ref{fig:scal_strong_2}.
+
+Brak niektórych wyników dla drugiej macierzy wynika z tego, że macierz ta jest zbyt duża żeby zmieścić ją
+w pamięci jednego węzła i nie dało się przez to przetestować niektórych kombinacji flag i ilości węzłow.
 
 \begin{figure}[ht!]
     \centering
@@ -171,7 +182,7 @@ Wyniki zostały przedstawione na rys.~\ref{fig:scal_strong_1} i rys.~\ref{fig:sc
         \includegraphics[width=\textwidth]{charts/s_50000_1000_5_i_m}
         \caption{InnerABC, MKL}
     \end{subfigure}
-    \caption{Silna skalowalność. Czasy dla $n=50000, d=1000, e=5, \text{tasks-per-node}=24$}\label{fig:animals}
+    \caption{Silna skalowalność. Czasy dla $n=50000, d=1000, e=5, \text{tasks-per-node}=24$}
     \label{fig:scal_strong_1}
 \end{figure}
 
@@ -193,14 +204,14 @@ Wyniki zostały przedstawione na rys.~\ref{fig:scal_strong_1} i rys.~\ref{fig:sc
         \includegraphics[width=\textwidth]{charts/s_100000_100_2_i_m}
         \caption{InnerABC, MKL}
     \end{subfigure}
-    \caption{Silna skalowalność. Czasy dla $n=100000, d=100, e=2, \text{tasks-per-node}=24$}\label{fig:animals}
+    \caption{Silna skalowalność. Czasy dla $n=100000, d=100, e=2, \text{tasks-per-node}=24$}
     \label{fig:scal_strong_2}
 \end{figure}
 
 \subsection{Słaba skalowalność}
 
-Testy silnej skalowalności zostały przeprowadzone na macierzy $n=100000, d=100$.
-Zmienna była liczba wykonywanych mnożesz i wynosiła $e = nodes \times 5$.
+Testy słabej skalowalności zostały przeprowadzone na macierzy $n=100000, d=100$.
+Zmienna była liczba wykonywanych mnożeń i wynosiła $e = nodes \times 5$.
 Parametr $c$ został ustalony na $c=2$
 Czas wczytywania macierzy wynosił ok. $9.5s$
 Wyniki zostały przedstawione na rys.~\ref{fig:scal_weak}.
@@ -215,7 +226,7 @@ Wyniki zostały przedstawione na rys.~\ref{fig:scal_weak}.
         \includegraphics[width=\textwidth]{charts/s_50000_1000_weak_i_m}
         \caption{InnerABC, MKL}
     \end{subfigure}
-    \caption{Słaba skalowalność. Czasy dla $n=50000, d=1000, e=nodes \times 5, \text{tasks-per-node}=24$}\label{fig:animals}
+    \caption{Słaba skalowalność. Czasy dla $n=50000, d=1000, e=nodes \times 5, \text{tasks-per-node}=24$}
     \label{fig:scal_weak}
 \end{figure}
 

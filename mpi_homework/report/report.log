@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.14159265-2.6-1.40.19 (TeX Live 2018/Arch Linux) (preloaded format=pdflatex 2019.5.5)  2 JUN 2019 15:39
+This is pdfTeX, Version 3.14159265-2.6-1.40.19 (TeX Live 2018/Arch Linux) (preloaded format=pdflatex 2019.5.5)  2 JUN 2019 18:59
 entering extended mode
  restricted \write18 enabled.
  %&-line parsing enabled.
@@ -227,14 +227,7 @@ Package caption3 Info: TeX engine: e-TeX on input line 64.
 )
 \c@subfigure=\count105
 \c@subtable=\count106
-) (./report.aux
-
-LaTeX Warning: Label `fig:animals' multiply defined.
-
-
-LaTeX Warning: Label `fig:animals' multiply defined.
-
-)
+) (./report.aux)
 \openout1 = `report.aux'.
 
 LaTeX Font Info:    Checking defaults for OML/cmm/m/it on input line 17.
@@ -392,106 +385,103 @@ LaTeX Font Info:    Try loading font information for OT4+cmtt on input line 18.
 (/usr/share/texmf-dist/tex/latex/polski/ot4cmtt.fd
 File: ot4cmtt.fd 2008/02/24 v1.2.1 Font defs for fonts PL (MW)
 )
-LaTeX Font Info:    Try loading font information for OMS+cmr on input line 24.
+LaTeX Font Info:    Try loading font information for OMS+cmr on input line 27.
 
 (/usr/share/texmf-dist/tex/latex/base/omscmr.fd
 File: omscmr.fd 2014/09/29 v2.5h Standard LaTeX font definitions
 )
 LaTeX Font Info:    Font shape `OMS/cmr/m/n' in size <10> not available
-(Font)              Font shape `OMS/cmsy/m/n' tried instead on input line 24.
+(Font)              Font shape `OMS/cmsy/m/n' tried instead on input line 27.
 LaTeX Font Info:    External font `plex10' loaded for size
-(Font)              <10> on input line 34.
+(Font)              <10> on input line 37.
 LaTeX Font Info:    External font `plex10' loaded for size
-(Font)              <7> on input line 34.
+(Font)              <7> on input line 37.
 LaTeX Font Info:    External font `plex10' loaded for size
-(Font)              <5> on input line 34.
+(Font)              <5> on input line 37.
  [1
 
 {/var/lib/texmf/fonts/map/pdftex/updmap/pdftex.map}] [2] [3]
 <charts/s_50000_1000_5.png, id=23, 433.62pt x 289.08pt>
 File: charts/s_50000_1000_5.png Graphic file (type png)
 <use charts/s_50000_1000_5.png>
-Package pdftex.def Info: charts/s_50000_1000_5.png  used on input line 159.
+Package pdftex.def Info: charts/s_50000_1000_5.png  used on input line 170.
 (pdftex.def)             Requested size: 211.38832pt x 140.92703pt.
 <charts/s_50000_1000_5_m.png, id=25, 433.62pt x 289.08pt>
 File: charts/s_50000_1000_5_m.png Graphic file (type png)
 <use charts/s_50000_1000_5_m.png>
-Package pdftex.def Info: charts/s_50000_1000_5_m.png  used on input line 163.
+Package pdftex.def Info: charts/s_50000_1000_5_m.png  used on input line 174.
 (pdftex.def)             Requested size: 211.38832pt x 140.92703pt.
 <charts/s_50000_1000_5_i.png, id=26, 433.62pt x 289.08pt>
 File: charts/s_50000_1000_5_i.png Graphic file (type png)
 <use charts/s_50000_1000_5_i.png>
-Package pdftex.def Info: charts/s_50000_1000_5_i.png  used on input line 167.
+Package pdftex.def Info: charts/s_50000_1000_5_i.png  used on input line 178.
 (pdftex.def)             Requested size: 211.38832pt x 140.92703pt.
 <charts/s_50000_1000_5_i_m.png, id=27, 433.62pt x 289.08pt>
 File: charts/s_50000_1000_5_i_m.png Graphic file (type png)
 <use charts/s_50000_1000_5_i_m.png>
-Package pdftex.def Info: charts/s_50000_1000_5_i_m.png  used on input line 171.
+Package pdftex.def Info: charts/s_50000_1000_5_i_m.png  used on input line 182.
 
 (pdftex.def)             Requested size: 211.38832pt x 140.92703pt.
 <charts/s_100000_100_2.png, id=28, 433.62pt x 289.08pt>
 File: charts/s_100000_100_2.png Graphic file (type png)
 <use charts/s_100000_100_2.png>
-Package pdftex.def Info: charts/s_100000_100_2.png  used on input line 181.
+Package pdftex.def Info: charts/s_100000_100_2.png  used on input line 192.
 (pdftex.def)             Requested size: 211.38832pt x 140.92703pt.
 <charts/s_100000_100_2_m.png, id=29, 433.62pt x 289.08pt>
 File: charts/s_100000_100_2_m.png Graphic file (type png)
 <use charts/s_100000_100_2_m.png>
-Package pdftex.def Info: charts/s_100000_100_2_m.png  used on input line 185.
+Package pdftex.def Info: charts/s_100000_100_2_m.png  used on input line 196.
 (pdftex.def)             Requested size: 211.38832pt x 140.92703pt.
 <charts/s_100000_100_2_i.png, id=30, 433.62pt x 289.08pt>
 File: charts/s_100000_100_2_i.png Graphic file (type png)
 <use charts/s_100000_100_2_i.png>
-Package pdftex.def Info: charts/s_100000_100_2_i.png  used on input line 189.
+Package pdftex.def Info: charts/s_100000_100_2_i.png  used on input line 200.
 (pdftex.def)             Requested size: 211.38832pt x 140.92703pt.
 <charts/s_100000_100_2_i_m.png, id=31, 433.62pt x 289.08pt>
 File: charts/s_100000_100_2_i_m.png Graphic file (type png)
 <use charts/s_100000_100_2_i_m.png>
-Package pdftex.def Info: charts/s_100000_100_2_i_m.png  used on input line 193.
+Package pdftex.def Info: charts/s_100000_100_2_i_m.png  used on input line 204.
 
 (pdftex.def)             Requested size: 211.38832pt x 140.92703pt.
 <charts/s_50000_1000_weak_m.png, id=32, 433.62pt x 289.08pt>
 File: charts/s_50000_1000_weak_m.png Graphic file (type png)
 <use charts/s_50000_1000_weak_m.png>
-Package pdftex.def Info: charts/s_50000_1000_weak_m.png  used on input line 211
+Package pdftex.def Info: charts/s_50000_1000_weak_m.png  used on input line 222
 .
 (pdftex.def)             Requested size: 211.38832pt x 140.92703pt.
 <charts/s_50000_1000_weak_i_m.png, id=33, 433.62pt x 289.08pt>
 File: charts/s_50000_1000_weak_i_m.png Graphic file (type png)
 <use charts/s_50000_1000_weak_i_m.png>
 Package pdftex.def Info: charts/s_50000_1000_weak_i_m.png  used on input line 2
-15.
+26.
 (pdftex.def)             Requested size: 211.38832pt x 140.92703pt.
  [4 <./charts/s_50000_1000_5.png> <./charts/s_50000_1000_5_m.png> <./charts/s_5
 0000_1000_5_i.png> <./charts/s_50000_1000_5_i_m.png>] [5 <./charts/s_100000_100
 _2.png> <./charts/s_100000_100_2_m.png> <./charts/s_100000_100_2_i.png> <./char
 ts/s_100000_100_2_i_m.png> <./charts/s_50000_1000_weak_m.png> <./charts/s_50000
-_1000_weak_i_m.png>] (./report.aux)
-
-LaTeX Warning: There were multiply-defined labels.
-
- ) 
+_1000_weak_i_m.png>] (./report.aux) ) 
 Here is how much of TeX's memory you used:
- 4403 strings out of 492616
- 64461 string characters out of 6135178
- 137353 words of memory out of 5000000
- 8213 multiletter control sequences out of 15000+600000
+ 4402 strings out of 492616
+ 64448 string characters out of 6135178
+ 137306 words of memory out of 5000000
+ 8212 multiletter control sequences out of 15000+600000
  17092 words of font info for 53 fonts, out of 8000000 for 9000
  1141 hyphenation exceptions out of 8191
  42i,7n,40p,273b,457s stack positions out of 5000i,500n,10000p,200000b,80000s
-{/usr/share/texmf-dist/fonts/enc/dvips/pl/plrm.enc}{/usr/share/texmf-dist/fon
-ts/enc/dvips/pl/plms.enc}{/usr/share/texmf-dist/fonts/enc/dvips/pl/plmi.enc}{/u
-sr/share/texmf-dist/fonts/enc/dvips/pl/plit.enc}{/usr/share/texmf-dist/fonts/en
-c/dvips/pl/pltt.enc}</usr/share/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy1
-0.pfb></usr/share/texmf-dist/fonts/type1/public/pl/plbx10.pfb></usr/share/texmf
--dist/fonts/type1/public/pl/plbx12.pfb></usr/share/texmf-dist/fonts/type1/publi
-c/pl/plmi10.pfb></usr/share/texmf-dist/fonts/type1/public/pl/plr10.pfb></usr/sh
-are/texmf-dist/fonts/type1/public/pl/plr12.pfb></usr/share/texmf-dist/fonts/typ
-e1/public/pl/plr17.pfb></usr/share/texmf-dist/fonts/type1/public/pl/plr7.pfb></
-usr/share/texmf-dist/fonts/type1/public/pl/plr9.pfb></usr/share/texmf-dist/font
-s/type1/public/pl/plsy10.pfb></usr/share/texmf-dist/fonts/type1/public/pl/plti1
-0.pfb></usr/share/texmf-dist/fonts/type1/public/pl/pltt12.pfb>
-Output written on report.pdf (5 pages, 758136 bytes).
+{/usr/share/texmf-dist/fonts/enc/dvips/pl/
+plrm.enc}{/usr/share/texmf-dist/fonts/enc/dvips/pl/plms.enc}{/usr/share/texmf-d
+ist/fonts/enc/dvips/pl/plmi.enc}{/usr/share/texmf-dist/fonts/enc/dvips/pl/plit.
+enc}{/usr/share/texmf-dist/fonts/enc/dvips/pl/pltt.enc}</usr/share/texmf-dist/f
+onts/type1/public/amsfonts/cm/cmsy10.pfb></usr/share/texmf-dist/fonts/type1/pub
+lic/pl/plbx10.pfb></usr/share/texmf-dist/fonts/type1/public/pl/plbx12.pfb></usr
+/share/texmf-dist/fonts/type1/public/pl/plmi10.pfb></usr/share/texmf-dist/fonts
+/type1/public/pl/plr10.pfb></usr/share/texmf-dist/fonts/type1/public/pl/plr12.p
+fb></usr/share/texmf-dist/fonts/type1/public/pl/plr17.pfb></usr/share/texmf-dis
+t/fonts/type1/public/pl/plr7.pfb></usr/share/texmf-dist/fonts/type1/public/pl/p
+lr9.pfb></usr/share/texmf-dist/fonts/type1/public/pl/plsy10.pfb></usr/share/tex
+mf-dist/fonts/type1/public/pl/plti10.pfb></usr/share/texmf-dist/fonts/type1/pub
+lic/pl/pltt12.pfb>
+Output written on report.pdf (5 pages, 759009 bytes).
 PDF statistics:
  94 PDF objects out of 1000 (max. 8388607)
  54 compressed objects within 1 object stream

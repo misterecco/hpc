@@ -37,7 +37,8 @@ void multiplyLocal(SparseMatrix& A, const DenseMatrix& B, DenseMatrix& C,
 }
 
 void multiply(SparseMatrix& myA, DenseMatrix& myB, DenseMatrix& myC,
-              const Config& config, const MpiGroup& layer) {
+              const Config& config, const MpiGroup& layer,
+              const MpiGroup& replGroup) {
   for (int e = 0; e < config.exponent; e++) {
     MatrixInfo myCInfo = myC.getInfo();
     myB = myC;
@@ -46,9 +47,20 @@ void multiply(SparseMatrix& myA, DenseMatrix& myB, DenseMatrix& myC,
     int rounds =
         config.use_inner ? layer.size / config.repl_group_size : layer.size;
 
+    if (config.use_inner && e > 0) {
+      DenseMatrix myInitB = myB;
+      MPI_Allreduce(myInitB.values.data(), myB.values.data(),
+                    myB.rows * myB.cols, MPI_DOUBLE, MPI_SUM, replGroup.comm);
+    }
+
     for (int i = 0; i < rounds; i++) {
-      shiftAandCompute(myA, layer, 1,
-                       [&]() { multiplyLocal(myA, myB, myC, config.use_mkl); });
+      if (rounds > 1) {
+        shiftAandCompute(myA, layer, 1, [&]() {
+          multiplyLocal(myA, myB, myC, config.use_mkl);
+        });
+      } else {
+        multiplyLocal(myA, myB, myC, config.use_mkl);
+      }
     }
   }
 }
